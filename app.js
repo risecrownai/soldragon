@@ -63,13 +63,22 @@
       o.className = "orig";
       o.lang = current.lang;
       o.textContent = p.orig;
+      o.hidden = !p.orig;
+      label.hidden = !p.orig;
       const e = document.createElement("p");
       e.className = "en";
       e.lang = "en";
       e.textContent = p.en || "";
-      d.append(label, o, e);
+      e.hidden = !p.en;
+      const k = document.createElement("p");
+      k.className = "ko";
+      k.lang = "ko";
+      k.textContent = p.ko || "";
+      k.hidden = !p.ko;
+      d.append(label, o, e, k);
       box.append(d);
     });
+    applyMode();
     renderList();
     // 브라우저 정책상 사용자 클릭 이후에만 자동 재생이 가능합니다.
     if (fromUser && $("auto").checked) play();
@@ -85,11 +94,12 @@
     return voices.find((v) => v.lang === lang) || voices.find((v) => v.lang.startsWith(base)) || null;
   }
 
-  function speak(text, lang, rate) {
+  function speak(text, lang, rate, volume) {
     return new Promise((resolve) => {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
       u.rate = rate;
+      u.volume = volume;
       const v = pickVoice(lang);
       if (v) u.voice = v;
       u.onend = u.onerror = () => resolve();
@@ -104,8 +114,9 @@
     const my = ++token;
     const mode = $("mode").value;
     const rate = parseFloat($("rate").value);
-    if (mode !== "en" && !pickVoice(current.lang)) {
-      showNote("이 기기에 원문 언어의 음성이 없어 기본 음성으로 읽을 수 있습니다. 영어 낭독은 정상 작동합니다.");
+    const wantOrig = mode === "all" || mode === "orig";
+    if (wantOrig && !pickVoice(current.lang)) {
+      showNote("이 기기에 원문 언어의 음성이 없어 기본 음성으로 읽을 수 있습니다. 영어·한국어 낭독은 해당 음성이 있으면 정상 작동합니다.");
     } else showNote("");
     for (let i = 0; i < current.paragraphs.length; i++) {
       if (my !== token) return;
@@ -113,9 +124,13 @@
       const el = $("p" + i);
       el.classList.add("playing");
       el.scrollIntoView({ block: "center", behavior: "smooth" });
-      if (mode !== "en") await speak(p.orig, current.lang, rate);
+      // 볼륨은 낭독 도중에도 조절할 수 있도록 매번 읽는다.
+      const vol = () => parseFloat($("volume").value);
+      if (wantOrig && p.orig) await speak(p.orig, p.lang || current.lang, rate, vol());
       if (my !== token) return;
-      if (mode !== "orig" && p.en) await speak(p.en, "en-US", rate);
+      if ((mode === "all" || mode === "en") && p.en) await speak(p.en, "en-US", rate, vol());
+      if (my !== token) return;
+      if ((mode === "all" || mode === "ko") && p.ko) await speak(p.ko, "ko-KR", rate, vol());
       el.classList.remove("playing");
     }
   }
@@ -133,6 +148,22 @@
   }
 
   if (tts) tts.onvoiceschanged = () => {};
+  function applyMode() {
+    $("paras").dataset.mode = $("mode").value;
+  }
+  $("mode").onchange = () => { applyMode(); if (token && tts && tts.speaking) play(); };
+
+  try {
+    const v = localStorage.getItem("sutras.volume");
+    if (v !== null) $("volume").value = v;
+  } catch { /* 저장소 사용 불가 */ }
+  const showVolume = () => { $("volumeOut").textContent = Math.round($("volume").value * 100) + "%"; };
+  $("volume").oninput = () => {
+    showVolume();
+    try { localStorage.setItem("sutras.volume", $("volume").value); } catch { /* ignore */ }
+  };
+  showVolume();
+
   $("playBtn").onclick = play;
   $("stopBtn").onclick = stop;
   window.addEventListener("pagehide", stop);
@@ -147,6 +178,7 @@
     const f = new FormData($("addForm"));
     const o = paras(f.get("orig"));
     const e = paras(f.get("en"));
+    const k = paras(f.get("ko"));
     if (!o.length) return;
     const sutra = {
       id: "c" + Date.now().toString(36),
@@ -154,7 +186,7 @@
       title: f.get("title").trim(),
       lang: f.get("lang"),
       origLabel: "원문",
-      paragraphs: o.map((orig, i) => ({ orig, en: e[i] || "" })),
+      paragraphs: o.map((orig, i) => ({ orig, en: e[i] || "", ko: k[i] || "" })),
     };
     custom.push(sutra);
     saveCustom(custom);
@@ -189,7 +221,11 @@
           origLabel: "원문",
           paragraphs: s.paragraphs
             .filter((p) => p && typeof p.orig === "string")
-            .map((p) => ({ orig: p.orig, en: typeof p.en === "string" ? p.en : "" })),
+            .map((p) => ({
+              orig: p.orig,
+              en: typeof p.en === "string" ? p.en : "",
+              ko: typeof p.ko === "string" ? p.ko : "",
+            })),
         });
         n++;
       }

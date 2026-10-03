@@ -44,3 +44,11 @@ dialog menu{display:flex;justify-content:flex-end;gap:.5rem;padding:0;margin:0}
   .layout{display:block}
 }
 @media (prefers-reduced-motion:reduce){.sidebar{transition:none}}
+
+/* 선택한 언어만 표시 */
+#paras[data-mode="orig"] .en,#paras[data-mode="orig"] .ko,
+#paras[data-mode="en"] .orig,#paras[data-mode="en"] .orig-label,#paras[data-mode="en"] .ko,
+#paras[data-mode="ko"] .orig,#paras[data-mode="ko"] .orig-label,#paras[data-mode="ko"] .en{display:none}
+.para .ko{margin:.2rem 0 0}
+.para .en{margin:0}
+#paras[data-mode="en"] .en,#paras[data-mode="ko"] .ko{color:var(--fg);font-size:1.1rem}
