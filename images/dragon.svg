@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160" role="img" aria-label="Dragon">
+<g fill="none" stroke="#c0392b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+<path d="M270 120 C230 150 200 100 170 120 C140 140 120 80 90 95 C70 105 60 80 70 62"/>
+</g>
+<g fill="#c0392b" stroke="#7b1d14" stroke-width="2">
+<path d="M70 62 C50 40 60 20 88 22 C100 24 108 34 104 46 C98 58 84 66 70 62Z"/>
+<path d="M92 24 L100 6 L106 28Z"/><path d="M80 24 L76 6 L90 22Z"/>
+<path d="M60 52 L36 58 L56 66Z"/>
+<path d="M195 118 l8 -22 l8 22Z M150 124 l8 -22 l8 22Z M110 96 l7 -20 l8 20Z"/>
+</g>
+<circle cx="88" cy="36" r="4" fill="#fff3c4"/><circle cx="89" cy="36" r="2" fill="#222"/>
+<path d="M54 58 Q38 74 30 70 M56 62 Q44 84 34 82" fill="none" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

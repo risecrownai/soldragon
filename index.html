@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연꽃 · 용 · 태양 불경</title>
+<meta name="description" content="불경 원문과 영어 번역을 읽고 자동 낭독으로 듣는 웹사이트. 솔라나 지갑 연동 지원.">
+<link rel="icon" href="images/lotus.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <button id="menuBtn" class="icon-btn" aria-label="메뉴 열기">☰</button>
+  <img src="images/sun.svg" alt="" class="logo">
+  <h1>연꽃 · 용 · 태양 <small>Sutra Reader</small></h1>
+  <div class="wallet">
+    <select id="network" aria-label="솔라나 네트워크">
+      <option value="mainnet-beta">Mainnet</option>
+      <option value="devnet">Devnet</option>
+    </select>
+    <span id="walletInfo" class="wallet-info" hidden></span>
+    <button id="walletBtn" class="btn primary">지갑 연결</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="sidebar" class="sidebar">
+    <div class="side-head">
+      <h2>경전 목록</h2>
+      <button id="addBtn" class="btn small">＋ 경전 추가</button>
+    </div>
+    <ul id="sutraList"></ul>
+    <div class="side-foot">
+      <button id="exportBtn" class="btn small ghost">내보내기</button>
+      <label class="btn small ghost">가져오기<input id="importFile" type="file" accept="application/json" hidden></label>
+    </div>
+    <div class="deco">
+      <img src="images/lotus.svg" alt="연꽃">
+      <img src="images/dragon.svg" alt="용">
+    </div>
+  </aside>
+
+  <main id="main">
+    <section class="hero">
+      <img src="images/dragon.svg" alt="용" class="hero-dragon">
+      <img src="images/sun.svg" alt="태양" class="hero-sun">
+      <img src="images/lotus.svg" alt="연꽃" class="hero-lotus">
+    </section>
+
+    <section id="reader" hidden>
+      <h2 id="title"></h2>
+      <div class="controls">
+        <button id="playBtn" class="btn primary">▶ 낭독</button>
+        <button id="stopBtn" class="btn">■ 정지</button>
+        <label>읽기
+          <select id="mode">
+            <option value="both">원문 + 영어</option>
+            <option value="orig">원문만</option>
+            <option value="en">영어만</option>
+          </select>
+        </label>
+        <label>속도
+          <input id="rate" type="range" min="0.5" max="1.5" step="0.1" value="0.9">
+        </label>
+        <label class="check"><input id="auto" type="checkbox" checked> 경전 선택 시 자동 낭독</label>
+      </div>
+      <p id="ttsNote" class="note" hidden></p>
+      <div id="paras"></div>
+    </section>
+    <p id="empty" class="note">왼쪽 메뉴에서 경전을 선택하세요.</p>
+  </main>
+</div>
+
+<dialog id="addDialog">
+  <form method="dialog" id="addForm">
+    <h2>경전 추가</h2>
+    <label>제목 <input name="title" required maxlength="100"></label>
+    <label>원문 언어
+      <select name="lang">
+        <option value="zh-CN">한문 (中文)</option>
+        <option value="hi-IN">팔리어 / 산스크리트 (로마자)</option>
+        <option value="ko-KR">한국어</option>
+        <option value="ja-JP">日本語</option>
+        <option value="bo">티베트어</option>
+        <option value="en-US">English</option>
+      </select>
+    </label>
+    <label>원문 <small>(문단은 빈 줄로 구분)</small>
+      <textarea name="orig" rows="6" required></textarea>
+    </label>
+    <label>영어 번역 <small>(원문과 같은 순서로 빈 줄 구분)</small>
+      <textarea name="en" rows="6"></textarea>
+    </label>
+    <menu>
+      <button type="button" id="cancelAdd" class="btn">취소</button>
+      <button type="submit" class="btn primary">추가</button>
+    </menu>
+  </form>
+</dialog>
+
+<script src="sutras.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

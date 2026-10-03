@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Sun">
+<defs><radialGradient id="s"><stop offset="0" stop-color="#fff2b0"/><stop offset="1" stop-color="#f5a623"/></radialGradient></defs>
+<g stroke="#f5a623" stroke-width="5" stroke-linecap="round">
+<path d="M100 8v26M100 166v26M8 100h26M166 100h26M35 35l18 18M147 147l18 18M165 35l-18 18M53 147l-18 18"/>
+</g>
+<circle cx="100" cy="100" r="50" fill="url(#s)" stroke="#d98200" stroke-width="3"/>
+</svg>
