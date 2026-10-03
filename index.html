@@ -54,10 +54,15 @@
         <button id="stopBtn" class="btn">■ 정지</button>
         <label>읽기
           <select id="mode">
-            <option value="both">원문 + 영어</option>
-            <option value="orig">원문만</option>
-            <option value="en">영어만</option>
+            <option value="all">원문 + 영어 + 한국어</option>
+            <option value="orig">원문</option>
+            <option value="en">영어</option>
+            <option value="ko">한국어</option>
           </select>
+        </label>
+        <label>볼륨
+          <input id="volume" type="range" min="0" max="1" step="0.1" value="1" aria-label="낭독 볼륨">
+          <output id="volumeOut">100%</output>
         </label>
         <label>속도
           <input id="rate" type="range" min="0.5" max="1.5" step="0.1" value="0.9">
@@ -89,7 +94,10 @@
       <textarea name="orig" rows="6" required></textarea>
     </label>
     <label>영어 번역 <small>(원문과 같은 순서로 빈 줄 구분)</small>
-      <textarea name="en" rows="6"></textarea>
+      <textarea name="en" rows="5"></textarea>
+    </label>
+    <label>한국어 번역 <small>(원문과 같은 순서로 빈 줄 구분)</small>
+      <textarea name="ko" rows="5"></textarea>
     </label>
     <menu>
       <button type="button" id="cancelAdd" class="btn">취소</button>

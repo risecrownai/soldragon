@@ -1,4 +1,5 @@
-// 기본 제공 경전. 각 문단은 { orig: 원문, en: 영어 }.
+// 기본 제공 경전. 각 문단은 { orig, en, ko } (+ 선택적으로 lang: 문단별 원문 낭독 언어).
+// orig가 비어 있는 문단은 해설이며 원문 낭독에서 건너뜁니다.
 // 원문 언어(lang)는 낭독용 BCP-47 코드입니다.
 window.DEFAULT_SUTRAS = [
   {
@@ -8,37 +9,150 @@ window.DEFAULT_SUTRAS = [
     origLabel: "漢文 (玄奘 譯)",
     paragraphs: [
       { orig: "觀自在菩薩，行深般若波羅蜜多時，照見五蘊皆空，度一切苦厄。",
-        en: "When Avalokiteshvara Bodhisattva was practicing the profound Prajnaparamita, he illuminated the five skandhas and saw that they are all empty, and he crossed beyond all suffering." },
+        en: "When Avalokiteshvara Bodhisattva was practicing the profound Prajnaparamita, he illuminated the five skandhas and saw that they are all empty, and he crossed beyond all suffering.",
+        ko: "관자재보살이 깊은 반야바라밀다를 행할 때, 오온이 모두 공함을 비추어 보고 모든 괴로움과 재앙을 건너셨다." },
       { orig: "舍利子，色不異空，空不異色，色即是空，空即是色，受想行識，亦復如是。",
-        en: "Shariputra, form is not different from emptiness, emptiness is not different from form. Form itself is emptiness, emptiness itself is form. Feeling, perception, formation and consciousness are also like this." },
+        en: "Shariputra, form is not different from emptiness, emptiness is not different from form. Form itself is emptiness, emptiness itself is form. Feeling, perception, formation and consciousness are also like this.",
+        ko: "사리자여, 색은 공과 다르지 않고 공은 색과 다르지 않으며, 색이 곧 공이요 공이 곧 색이니, 수·상·행·식 또한 그러하다." },
       { orig: "舍利子，是諸法空相，不生不滅，不垢不淨，不增不減。",
-        en: "Shariputra, all dharmas are marked by emptiness: they are neither produced nor destroyed, neither defiled nor pure, neither increasing nor decreasing." },
+        en: "Shariputra, all dharmas are marked by emptiness: they are neither produced nor destroyed, neither defiled nor pure, neither increasing nor decreasing.",
+        ko: "사리자여, 이 모든 법은 공한 모습이어서 생기지도 멸하지도 않으며, 더럽지도 깨끗하지도 않으며, 늘지도 줄지도 않는다." },
       { orig: "故空中無色，無受想行識，無眼耳鼻舌身意，無色聲香味觸法，無眼界，乃至無意識界。",
-        en: "Therefore, in emptiness there is no form, no feeling, perception, formation or consciousness; no eye, ear, nose, tongue, body or mind; no sight, sound, smell, taste, touch or object of mind; no realm of sight, and so on up to no realm of mind-consciousness." },
+        en: "Therefore, in emptiness there is no form, no feeling, perception, formation or consciousness; no eye, ear, nose, tongue, body or mind; no sight, sound, smell, taste, touch or object of mind; no realm of sight, and so on up to no realm of mind-consciousness.",
+        ko: "그러므로 공 가운데에는 색이 없고 수·상·행·식도 없으며, 눈·귀·코·혀·몸·뜻도 없고, 색·소리·향기·맛·촉감·법도 없으며, 눈의 영역도 없고 나아가 의식의 영역까지도 없다." },
       { orig: "無無明，亦無無明盡，乃至無老死，亦無老死盡。無苦集滅道，無智亦無得。",
-        en: "There is no ignorance and no end of ignorance, and so on up to no old age and death and no end of old age and death. There is no suffering, no cause of suffering, no cessation, no path; no wisdom and no attainment." },
+        en: "There is no ignorance and no end of ignorance, and so on up to no old age and death and no end of old age and death. There is no suffering, no cause of suffering, no cessation, no path; no wisdom and no attainment.",
+        ko: "무명도 없고 무명이 다함도 없으며, 나아가 늙고 죽음도 없고 늙고 죽음이 다함도 없다. 고·집·멸·도도 없고, 지혜도 없고 얻음도 없다." },
       { orig: "以無所得故，菩提薩埵，依般若波羅蜜多故，心無罣礙，無罣礙故，無有恐怖，遠離顛倒夢想，究竟涅槃。",
-        en: "Because there is nothing to attain, the Bodhisattva relies on Prajnaparamita, and the mind is free of obstruction. Without obstruction there is no fear; far beyond upside-down views and dreams, one reaches ultimate nirvana." },
+        en: "Because there is nothing to attain, the Bodhisattva relies on Prajnaparamita, and the mind is free of obstruction. Without obstruction there is no fear; far beyond upside-down views and dreams, one reaches ultimate nirvana.",
+        ko: "얻을 바가 없기 때문에 보살은 반야바라밀다에 의지하므로 마음에 걸림이 없고, 걸림이 없으므로 두려움이 없어 뒤바뀐 헛된 생각을 멀리 떠나 마침내 열반에 든다." },
       { orig: "三世諸佛，依般若波羅蜜多故，得阿耨多羅三藐三菩提。",
-        en: "All Buddhas of the three times rely on Prajnaparamita and so attain unsurpassed, complete, perfect awakening." },
+        en: "All Buddhas of the three times rely on Prajnaparamita and so attain unsurpassed, complete, perfect awakening.",
+        ko: "삼세의 모든 부처님도 반야바라밀다에 의지하므로 더없이 높고 바른 깨달음을 얻으셨다." },
       { orig: "故知般若波羅蜜多，是大神咒，是大明咒，是無上咒，是無等等咒，能除一切苦，真實不虛。",
-        en: "Therefore know that Prajnaparamita is the great divine mantra, the great bright mantra, the supreme mantra, the unequalled mantra, which can remove all suffering. It is true and not false." },
+        en: "Therefore know that Prajnaparamita is the great divine mantra, the great bright mantra, the supreme mantra, the unequalled mantra, which can remove all suffering. It is true and not false.",
+        ko: "그러므로 알라, 반야바라밀다는 크게 신비한 주문이며, 크게 밝은 주문이며, 더없는 주문이며, 견줄 데 없는 주문이어서 능히 모든 괴로움을 없애니, 진실하여 헛되지 않다." },
       { orig: "故說般若波羅蜜多咒，即說咒曰：揭諦揭諦，波羅揭諦，波羅僧揭諦，菩提薩婆訶。",
-        en: "So proclaim the Prajnaparamita mantra, saying: Gate gate, paragate, parasamgate, bodhi svaha!" }
+        en: "So proclaim the Prajnaparamita mantra, saying: Gate gate, paragate, parasamgate, bodhi svaha!",
+        ko: "그러므로 반야바라밀다의 주문을 설하노니, 곧 주문을 말하되: 아제아제 바라아제 바라승아제 모지 사바하." }
+    ]
+  },
+  {
+    id: "diamond",
+    title: "금강경 · Diamond Sutra (발췌)",
+    lang: "zh-CN",
+    origLabel: "漢文 (鳩摩羅什 譯)",
+    paragraphs: [
+      { orig: "如是我聞：一時，佛在舍衛國祇樹給孤獨園，與大比丘眾千二百五十人俱。爾時，世尊食時，著衣持缽，入舍衛大城乞食。於其城中次第乞已，還至本處。飯食訖，收衣缽，洗足已，敷座而坐。",
+        en: "Thus have I heard. At one time the Buddha was in Shravasti, in the Jeta Grove in Anathapindika's garden, together with an assembly of 1,250 great monks. At mealtime the World-Honored One put on his robe, took his bowl, and entered the great city of Shravasti to beg for food. After begging in order throughout the city, he returned to his place. When the meal was finished, he put away his robe and bowl, washed his feet, arranged his seat and sat down.",
+        ko: "이와 같이 나는 들었습니다. 한때 부처님께서 사위국 기수급고독원에 계시면서 큰 비구 천이백오십 명과 함께 계셨습니다. 그때 세존께서 공양 때가 되어 가사를 입고 발우를 들고 사위성에 들어가 걸식하셨습니다. 성안에서 차례로 걸식을 마치고 본래 처소로 돌아와 공양을 드신 뒤, 가사와 발우를 거두고 발을 씻고 자리를 펴고 앉으셨습니다." },
+      { orig: "時長老須菩提在大眾中，即從座起，偏袒右肩，右膝著地，合掌恭敬而白佛言：「希有！世尊！如來善護念諸菩薩，善付囑諸菩薩。世尊！善男子、善女人，發阿耨多羅三藐三菩提心，應云何住？云何降伏其心？」",
+        en: "Then the elder Subhuti, who was in the assembly, rose from his seat, bared his right shoulder, knelt on his right knee, joined his palms respectfully and said to the Buddha: \"How rare, World-Honored One! The Tathagata protects and entrusts the bodhisattvas so well. World-Honored One, when good men and good women set out on the unsurpassed, complete, perfect awakening, how should they abide? How should they subdue their minds?\"",
+        ko: "그때 장로 수보리가 대중 가운데 있다가 자리에서 일어나 오른쪽 어깨를 드러내고 오른쪽 무릎을 땅에 대고 합장하여 공경히 부처님께 여쭈었습니다. “희유하십니다, 세존이시여! 여래께서는 모든 보살을 잘 보살펴 주시고 잘 당부해 주십니다. 세존이시여, 선남자 선녀인이 더없이 높고 바른 깨달음의 마음을 내었다면 어떻게 머물러야 하며, 그 마음을 어떻게 항복받아야 합니까?”" },
+      { orig: "佛言：「善哉，善哉！須菩提！如汝所說，如來善護念諸菩薩，善付囑諸菩薩。汝今諦聽！當為汝說：善男子、善女人，發阿耨多羅三藐三菩提心，應如是住，如是降伏其心。」",
+        en: "The Buddha said: \"Excellent, excellent, Subhuti! As you say, the Tathagata protects and entrusts the bodhisattvas well. Listen carefully now, and I will explain: when good men and good women set out on the unsurpassed, complete, perfect awakening, they should abide in this way and subdue their minds in this way.\"",
+        ko: "부처님께서 말씀하셨습니다. “훌륭하다, 훌륭하다, 수보리여! 네 말과 같이 여래는 모든 보살을 잘 보살피고 잘 당부한다. 이제 자세히 들어라. 너를 위해 말하리라. 선남자 선녀인이 더없이 높고 바른 깨달음의 마음을 내었다면 마땅히 이와 같이 머물고 이와 같이 그 마음을 항복받아야 한다.”" },
+      { orig: "如是滅度無量無數無邊眾生，實無眾生得滅度者。何以故？須菩提！若菩薩有我相、人相、眾生相、壽者相，即非菩薩。",
+        en: "Having thus led countless, innumerable, boundless beings to nirvana, in truth no being has been led to nirvana. Why? Subhuti, if a bodhisattva has the notion of a self, a person, a being, or a life-span, he is not a bodhisattva.",
+        ko: "이렇게 한량없고 셀 수 없고 끝없는 중생을 제도하였으나 실로 제도된 중생은 없다. 왜냐하면 수보리여, 만약 보살에게 아상, 인상, 중생상, 수자상이 있다면 곧 보살이 아니기 때문이다." },
+      { orig: "凡所有相，皆是虛妄。若見諸相非相，則見如來。",
+        en: "All that has form is illusory. If you see all forms as no-form, you see the Tathagata.",
+        ko: "무릇 모든 모습은 다 허망하다. 만약 모든 모습이 모습 아님을 본다면 곧 여래를 보리라." },
+      { orig: "是故，須菩提！諸菩薩摩訶薩應如是生清淨心，不應住色生心，不應住聲、香、味、觸、法生心，應無所住而生其心。",
+        en: "Therefore, Subhuti, all bodhisattvas, great beings, should give rise to a pure mind in this way: not abiding in form when giving rise to the mind, not abiding in sound, smell, taste, touch or mental objects. They should give rise to a mind that abides nowhere.",
+        ko: "그러므로 수보리여, 모든 보살마하살은 마땅히 이와 같이 청정한 마음을 내어야 한다. 색에 머물러 마음을 내지 말고, 소리·향기·맛·촉감·법에 머물러 마음을 내지 말며, 마땅히 머무는 바 없이 그 마음을 내어야 한다." },
+      { orig: "過去心不可得，現在心不可得，未來心不可得。",
+        en: "The past mind cannot be found, the present mind cannot be found, the future mind cannot be found.",
+        ko: "과거의 마음도 얻을 수 없고, 현재의 마음도 얻을 수 없으며, 미래의 마음도 얻을 수 없다." },
+      { orig: "一切有為法，如夢幻泡影，如露亦如電，應作如是觀。",
+        en: "All conditioned things are like a dream, an illusion, a bubble, a shadow; like dew and like lightning. Contemplate them in this way.",
+        ko: "모든 유위법은 꿈과 같고 환상과 같고 물거품과 그림자 같으며, 이슬과 같고 또 번개와 같으니, 마땅히 이와 같이 관할지니라." }
+    ]
+  },
+  {
+    id: "usnisa",
+    title: "불정존승다라니경 · Ushnisha Vijaya Dharani",
+    lang: "hi-IN",
+    origLabel: "Sanskrit (IAST)",
+    paragraphs: [
+      { orig: "",
+        en: "Background: In the Heaven of the Thirty-three, the deva Good Abode (Supratishthita) learned that he had only seven days to live and would then be reborn in lower realms. Terrified, he sought help from Indra, who appealed to the Buddha. The Buddha taught the Ushnisha Vijaya Dharani, which purifies karmic obstructions and lengthens life. (Summary only. The full sutra text is not included here; you can add it with the \"Add sutra\" button.)",
+        ko: "배경: 도리천의 선주(善住) 천자는 자신의 수명이 이레밖에 남지 않았고 그 뒤에는 악도에 태어난다는 것을 알고 두려워하여 제석천에게 도움을 청했습니다. 제석천이 부처님께 여쭙자, 부처님께서 죄업의 장애를 깨끗이 하고 수명을 늘려 주는 불정존승다라니를 설하셨습니다. (요약입니다. 경 전문은 포함되어 있지 않으며, ‘경전 추가’로 직접 넣을 수 있습니다.)" },
+      { orig: "Namo bhagavate trailokya-prativiśiṣṭāya buddhāya te namaḥ. Tadyathā: Oṃ viśuddhaya viśuddhaya, asama-sama-samantāvabhāsa-spharaṇa-gati-gagana-svabhāva-viśuddhe.",
+        en: "Homage to the Blessed One, the Buddha, supreme in the three worlds; I bow to you. Thus: Om, purify, purify, O pure one whose nature is as pure as the sky, shining everywhere without equal. (Dharani: recited as sacred sound; translated here in part.)",
+        ko: "삼계에서 가장 뛰어나신 세존 부처님께 귀의하며 절합니다. 곧 이러합니다. 옴, 청정하게 하소서, 청정하게 하소서. 허공과 같이 본성이 청정하며 견줄 데 없이 두루 빛나는 분이시여. (다라니는 신성한 소리로 독송하며, 여기서는 일부만 풀이했습니다.)" },
+      { orig: "Abhiṣiñcatu māṃ sarva-tathāgata-sugata-vara-vacana-amṛta-abhiṣekair mahā-mantra-pada āhara āhara āyuḥ-saṃdhāraṇi, śodhaya śodhaya, gagana-viśuddhe, uṣṇīṣa-vijaya-pariśuddhe, sahasra-raśmi-saṃcodite, sarva-tathāgata-avalokani, ṣaṭ-pāramitā-paripūraṇi.",
+        en: "May all the Tathagatas anoint me with the nectar of their excellent words. Bring, bring the great mantra words; O sustainer of life, purify, purify. O pure as the sky, utterly pure through the victory of the crown, urged on by a thousand rays, seen by all Tathagatas, fulfiller of the six perfections.",
+        ko: "모든 여래께서 훌륭한 말씀의 감로수로 저에게 관정해 주소서. 큰 진언의 구절을 가져오고 가져오소서. 수명을 지켜 주시는 분이시여, 깨끗이 하소서, 깨끗이 하소서. 허공처럼 청정하고 불정(佛頂)의 승리로 맑고 청정하며, 천 갈래의 빛으로 일깨워지고 모든 여래께서 살펴보시며 육바라밀을 원만히 하시는 분이시여." },
+      { orig: "Sarva-tathāgata-mati daśa-bhūmi-prati-ṣṭhite, sarva-tathāgata-hṛdaya adhiṣṭhāna-adhiṣṭhite, mudre mudre mahā-mudre, vajra-kāya-saṃhatana-pariśuddhe, sarva-karma-āvaraṇa-viśuddhe, pratinivartaya mama āyuḥ-pariśuddhe, sarva-tathāgata-samaya-adhiṣṭhāne.",
+        en: "O you who are established in the wisdom of all Tathagatas and in the ten bhumis, empowered by the heart of all Tathagatas; seal, seal, great seal; with a body firm as a diamond and utterly pure; cleansed of all karmic obstructions; turn back [my decline] and purify my life; empowered by the vow of all Tathagatas.",
+        ko: "모든 여래의 지혜와 십지에 굳게 머무시고 모든 여래의 마음으로 가피를 받으신 분이시여. 인(印)이시여, 인이시여, 큰 인이시여. 금강 같은 몸으로 굳고 청정하시며 모든 업의 장애를 깨끗이 하시는 분이시여. [쇠퇴를] 되돌리고 저의 수명을 청정하게 하소서. 모든 여래의 서원으로 가피하시는 분이시여." },
+      { orig: "Oṃ muni muni mahā-muni, vimuni vimuni mahā-vimuni, mati mati mahā-mati, mamati sumati tathatā-bhūta-koṭi-pariśuddhe, viśphuṭa-buddhi-śuddhe, he he jaya jaya vijaya vijaya, smara smara, sphara sphara, sphāraya sphāraya.",
+        en: "Om, sage, sage, great sage; liberated, liberated, great liberated one; wise, wise, great wise one; O pure in the very limit of suchness, pure in clear awakened understanding. Hey, hey! Victory, victory, great victory! Remember, remember! Radiate, radiate, make [it] radiate! (Dharani: recited as sacred sound.)",
+        ko: "옴, 성자시여, 성자시여, 큰 성자시여. 해탈하신 분이시여, 큰 해탈자시여. 지혜로운 분이시여, 큰 지혜자시여. 여여(如如)의 실제 끝까지 청정하며 밝은 깨달음의 지혜로 맑으신 분이시여. 헤 헤! 승리, 승리, 크나큰 승리! 기억하소서, 빛을 퍼뜨리소서. (다라니는 신성한 소리로 독송합니다.)" },
+      { orig: "Sarva-buddha-adhiṣṭhāna-adhiṣṭhite, śuddhe śuddhe, vajre vajre mahā-vajre, suvajre, vajra-garbhe jaya-garbhe, vijaya-garbhe, vajra-jvāla-garbhe, vajra-udbhave, vajra-saṃbhave, vajre vajraṃ bhavatu mama śarīraṃ.",
+        en: "Empowered by the blessing of all Buddhas; pure, pure; vajra, vajra, great vajra, excellent vajra; womb of the vajra, womb of victory, womb of great victory, womb of vajra flame; arisen from the vajra, born of the vajra. May my body become vajra.",
+        ko: "모든 부처님의 가피로 가호받으시는 분이시여. 청정하시고 청정하시며, 금강이시여, 금강이시여, 큰 금강이시여, 훌륭한 금강이시여. 금강의 태(胎), 승리의 태, 큰 승리의 태, 금강 불꽃의 태이시여. 금강에서 일어나시고 금강에서 나신 분이시여. 저의 몸이 금강이 되게 하소서." },
+      { orig: "Sarva-sattvānāṃ ca kāya-pariśuddhir bhavatu me, sarva-gati-pariśuddhiś ca, sarva-tathāgatāś ca māṃ samāśvāsayantu, buddhyā buddhyā, vibuddhyā vibuddhyā, bodhaya bodhaya, vibodhaya vibodhaya, muñca muñca, sarva-tathāgata-hṛdaya-adhiṣṭhāna-adhiṣṭhite, mudre mudre mahā-mudre svāhā.",
+        en: "May the body of all beings be purified for me, and the purification of all destinies. May all the Tathagatas comfort me. Awaken, awaken, fully awaken; cause to awaken, cause to fully awaken; release, release. O empowered by the heart-blessing of all Tathagatas: seal, seal, great seal. Svaha!",
+        ko: "모든 중생의 몸이 저에게 청정해지고 모든 갈 곳[육도]이 청정해지게 하소서. 모든 여래께서 저를 위로해 주소서. 깨달으소서, 깨달으소서, 두루 깨달으소서. 깨닫게 하소서, 두루 깨닫게 하소서. 풀어 주소서, 풀어 주소서. 모든 여래의 마음으로 가피하시는 분이시여. 인이시여, 인이시여, 큰 인이시여. 스바하(성취하소서)!" }
+    ]
+  },
+  {
+    id: "cheonsu",
+    title: "천수경 · Thousand Hands Sutra (발췌)",
+    lang: "ko-KR",
+    origLabel: "한자 · 진언 (한국 독송본)",
+    paragraphs: [
+      { orig: "修利修利 摩訶修利 修修利 娑婆訶",
+        lang: "ko-KR",
+        en: "Purification of the karma of speech mantra: \"Suri suri mahasuri susuri svaha.\" (Mantra, recited as sound; it means roughly: 'auspicious, very auspicious, supremely auspicious, may it be accomplished'.)",
+        ko: "정구업진언(淨口業眞言): 수리수리 마하수리 수수리 사바하. (입으로 지은 업을 깨끗이 하는 진언입니다. ‘길상하고 크게 길상하고 가장 길상하니, 성취하소서’라는 뜻입니다.)" },
+      { orig: "那謨 三滿多 沒駄喃 唵 度魯度魯 地尾 娑婆訶",
+        lang: "ko-KR",
+        en: "Mantra to settle and protect the deities of the five directions, inside and out: \"Namo samanta buddhanam, om duru duru jimi svaha.\" (Homage to the Buddhas everywhere; mantra recited as sound.)",
+        ko: "오방내외안위제신진언(五方內外安慰諸神眞言): 나무 사만다 못다남 옴 도로도로 지미 사바하. (두루 계신 부처님께 귀의하는 진언입니다.)" },
+      { orig: "無上甚深微妙法 百千萬劫難遭遇 我今聞見得受持 願解如來眞實義",
+        lang: "zh-CN",
+        en: "Verse for opening the sutra: The unsurpassed, profound, subtle Dharma is hard to meet in a hundred thousand million eons. Now I see and hear it and am able to receive and uphold it; I vow to understand the true meaning of the Tathagata.",
+        ko: "개경게(開經偈): 위없이 깊고 깊은 미묘한 법은 백천만 겁이 지나도 만나기 어렵네. 제가 이제 보고 듣고 받아 지니게 되었으니, 원하건대 여래의 진실한 뜻을 알게 하소서." },
+      { orig: "稽首觀音大悲呪 願力洪深相好身 千臂莊嚴普護持 千眼光明遍觀照 眞實語中宣密語 無爲心內起悲心 速令滿足諸希求 永使滅除諸罪業",
+        lang: "zh-CN",
+        en: "I bow to Avalokiteshvara's great compassion dharani. Your vow-power is vast and deep, your form majestic and auspicious. Your thousand arms adorn and protect everywhere; your thousand eyes shine light and see everywhere. In true words you proclaim secret words; within the unconditioned mind you arouse compassion. Quickly fulfill all our wishes; forever remove all karmic offenses.",
+        ko: "관음보살의 대비주에 머리 숙여 절합니다. 원력은 넓고 깊으며 상호는 거룩하십니다. 천 개의 팔로 장엄하여 두루 보호하고 지니시며, 천 개의 눈에서 나는 광명으로 두루 비추어 보십니다. 진실한 말씀 가운데 비밀한 말씀을 펴시고, 함이 없는 마음 가운데 자비심을 일으키시니, 모든 바람을 속히 만족케 하시고 모든 죄업을 길이 없애 주소서." },
+      { orig: "天龍衆聖同慈護 百千三昧頓薰修 受持身是光明幢 受持心是神通藏 洗滌塵勞願濟海 超證菩提方便門 我今稱誦誓歸依 所願從心悉圓滿",
+        lang: "zh-CN",
+        en: "Devas, nagas and all the holy ones protect us with shared compassion; hundreds of thousands of samadhis are suddenly perfumed into us. The body that upholds this is a banner of light; the mind that upholds this is a treasury of spiritual powers. Wash away the dust of toil, I vow to cross the sea; the expedient gate to surpass and realize bodhi. Now I recite and take refuge; may all my wishes be fully fulfilled according to my heart.",
+        ko: "천룡과 모든 성인이 함께 자비로 보호하시고, 백천 삼매가 단박에 훈습되어 닦아집니다. 이 주문을 받아 지니는 몸은 광명의 깃발이요, 받아 지니는 마음은 신통의 곳간입니다. 번뇌의 티끌을 씻어 괴로움의 바다를 건너고, 보리를 뛰어넘어 증득하는 방편문에 듭니다. 제가 이제 칭송하며 귀의하기를 서원하오니, 바라는 바가 마음 따라 모두 원만히 이루어지게 하소서." },
+      { orig: "나모 라 다나 다라 야야 / 나막 알약 바로기제 새바라야 / 모지 사다바야 / 마하 사다바야 / 마하 가로니가야 / 옴 / 살바 바예수 다라나 가라야 / 다사명 나막 가리다바 이맘 알야 바로기제 새바라 다바 / 니라간타 / 나막 하리나야 마발다 이사미 / 살발타 사다남 / 수반 아예염 / 살바 보다남 / 바바 말아 미수다감 / 다냐타 / 옴 아로계 / 아로가 마지로가 지가란제 / 혜혜 하례 / 마하 모지 사다바 / 사마라 사마라 하리나야 / 구로 구로 갈마 / 사다야 사다야 도로 도로 미연제 / 마하 미연제 / 다라 다라 다린나례 / 새바라 / 자라 자라 / 마라 미마라 아마라 / 몰제 예혜혜 / 로계 새바라 / 라아 미사미 나사야 / 나베 사미사미 나사야 / 모하 자라 미사미 나사야 / 호로 호로 마라 호로 하례 / 바나마 나바 / 사라 사라 / 시리 시리 / 소로 소로 / 못쟈 못쟈 / 모다야 모다야 / 매다리야 / 니라간타 / 가마사 날사남 / 바라 하라나야 / 마낙 사바하 / 싣다야 사바하 / 마하 싣다야 사바하 / 싣다 유예 새바라야 사바하 / 니라간타야 사바하 / 바라하 목카 싱하 목카야 사바하 / 바나마 하따야 사바하 / 자가라 욕다야 사바하 / 상카 섭나네 모다나야 사바하 / 마하라 구타다라야 사바하 / 바마 사간타 이사시체다 가릿나 이나야 사바하 / 먀가라 잘마 이바사나야 사바하 / 나모 라 다나 다라 야야 / 나막 알약 바로기제 새바라야 사바하 / 옴 싣전도 만다라 / 바다야 사바하",
+        lang: "ko-KR",
+        en: "Shinmyo Janggu Daedarani (the Great Compassion Dharani of Avalokiteshvara), as recited in Korean pronunciation. It is a dharani recited as sacred sound and is not translated word for word; it praises Avalokiteshvara's great compassion and asks for protection from fear and the removal of suffering.",
+        ko: "신묘장구대다라니(神妙章句大陀羅尼): 한국 독송본입니다. 관세음보살의 대비심을 찬탄하고 두려움과 괴로움에서 벗어나기를 비는 다라니로, 뜻을 풀지 않고 소리 그대로 독송합니다. (독송본마다 표기가 조금씩 다를 수 있습니다.)" },
+      { orig: "我昔所造諸惡業 皆由無始貪瞋癡 從身口意之所生 一切我今皆懺悔",
+        lang: "zh-CN",
+        en: "Verse of repentance: All the evil karma I have created in the past arises from beginningless greed, hatred and delusion; it is born of body, speech and mind. All of it I now repent.",
+        ko: "참회게(懺悔偈): 제가 지난 세월 지은 모든 악업은 다 끝없는 옛적부터의 탐냄과 성냄과 어리석음으로 말미암아, 몸과 말과 생각으로 지은 것이니, 이 모든 것을 제가 이제 다 참회합니다." },
+      { orig: "衆生無邊誓願度 煩惱無盡誓願斷 法門無量誓願學 佛道無上誓願成",
+        lang: "zh-CN",
+        en: "The Four Great Vows: Beings are boundless; I vow to save them all. Afflictions are endless; I vow to end them all. Dharma gates are immeasurable; I vow to learn them all. The Buddha Way is unsurpassed; I vow to attain it.",
+        ko: "사홍서원(四弘誓願): 가없는 중생을 다 건지오리다. 끝없는 번뇌를 다 끊으오리다. 한량없는 법문을 다 배우오리다. 위없는 불도를 다 이루오리다." }
     ]
   },
   {
     id: "dhammapada",
-    title: "법구경 1–4 · Dhammapada",
+    title: "법구경 1–3 · Dhammapada",
     lang: "hi-IN",
     origLabel: "Pāli",
     paragraphs: [
       { orig: "Manopubbaṅgamā dhammā, manoseṭṭhā manomayā. Manasā ce paduṭṭhena, bhāsati vā karoti vā; tato naṃ dukkhamanveti, cakkaṃva vahato padaṃ.",
-        en: "Mind precedes all things; mind is their chief, they are made by mind. If one speaks or acts with a corrupted mind, suffering follows, as the wheel follows the foot of the ox." },
+        en: "Mind precedes all things; mind is their chief, they are made by mind. If one speaks or acts with a corrupted mind, suffering follows, as the wheel follows the foot of the ox.",
+        ko: "모든 법은 마음이 앞서가고 마음이 으뜸이며 마음에서 만들어진다. 악한 마음으로 말하거나 행동하면, 수레바퀴가 소의 발자국을 따르듯 괴로움이 그를 따른다." },
       { orig: "Manopubbaṅgamā dhammā, manoseṭṭhā manomayā. Manasā ce pasannena, bhāsati vā karoti vā; tato naṃ sukhamanveti, chāyāva anapāyinī.",
-        en: "Mind precedes all things; mind is their chief, they are made by mind. If one speaks or acts with a serene mind, happiness follows, like a shadow that never leaves." },
+        en: "Mind precedes all things; mind is their chief, they are made by mind. If one speaks or acts with a serene mind, happiness follows, like a shadow that never leaves.",
+        ko: "모든 법은 마음이 앞서가고 마음이 으뜸이며 마음에서 만들어진다. 맑은 마음으로 말하거나 행동하면, 그림자가 떠나지 않듯 행복이 그를 따른다." },
       { orig: "Na hi verena verāni, sammantīdha kudācanaṃ; averena ca sammanti, esa dhammo sanantano.",
-        en: "Hatred is never appeased by hatred in this world. By non-hatred alone is hatred appeased. This is an eternal law." }
+        en: "Hatred is never appeased by hatred in this world. By non-hatred alone is hatred appeased. This is an eternal law.",
+        ko: "이 세상에서 원한은 원한으로 그치지 않고, 원한을 버림으로써 그친다. 이것은 영원한 진리이다." }
     ]
   },
   {
@@ -48,11 +162,14 @@ window.DEFAULT_SUTRAS = [
     origLabel: "Pāli",
     paragraphs: [
       { orig: "Sabbe sattā bhavantu sukhitattā.",
-        en: "May all beings be happy." },
+        en: "May all beings be happy.",
+        ko: "모든 존재가 행복하기를." },
       { orig: "Mātā yathā niyaṃ puttaṃ, āyusā ekaputtamanurakkhe; evampi sabbabhūtesu, mānasaṃ bhāvaye aparimāṇaṃ.",
-        en: "Just as a mother would protect her only child with her life, even so let one cultivate a boundless heart towards all beings." },
+        en: "Just as a mother would protect her only child with her life, even so let one cultivate a boundless heart towards all beings.",
+        ko: "어머니가 하나뿐인 자식을 목숨 걸고 지키듯, 모든 존재에 대해 한량없는 마음을 닦아라." },
       { orig: "Mettañca sabbalokasmiṃ, mānasaṃ bhāvaye aparimāṇaṃ; uddhaṃ adho ca tiriyañca, asambādhaṃ averamasapattaṃ.",
-        en: "Let one's thoughts of boundless love pervade the whole world: above, below and across, without obstruction, without hatred, without enmity." }
+        en: "Let one's thoughts of boundless love pervade the whole world: above, below and across, without obstruction, without hatred, without enmity.",
+        ko: "온 세상에 대해 한량없는 자애의 마음을 닦아라. 위로, 아래로, 옆으로, 막힘 없이, 미움 없이, 적의 없이." }
     ]
   }
 ];
