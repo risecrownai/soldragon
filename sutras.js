@@ -72,6 +72,27 @@ window.DEFAULT_SUTRAS = [
     ]
   },
   {
+    id: "diamond-verses",
+    title_ko: "금강경 사구게",
+    title_en: "Diamond Sutra Four-Line Verses",
+    lang: "zh-CN",
+    origLabel: "漢文 (鳩摩羅什 譯)",
+    paragraphs: [
+      { orig: "",
+        en: "The Diamond Sutra says that even receiving, upholding and teaching a single four-line verse (四句偈) of this sutra brings great merit. Below are the three verses most widely recited from it: chapters 5, 26 and 32.",
+        ko: "금강경은 이 경의 사구게 하나만이라도 받아 지니고 남을 위해 설해 주면 큰 복덕이 있다고 말합니다. 아래는 이 경에서 가장 널리 독송되는 세 게송으로, 제5분(여리실견분), 제26분(법신비상분), 제32분(응화비진분)의 게송입니다." },
+      { orig: "凡所有相，皆是虛妄。若見諸相非相，則見如來。",
+        en: "[Ch. 5] All that has form is illusory. If you see all forms as no-form, you see the Tathagata.",
+        ko: "[제5분] 무릇 모든 모습은 다 허망하다. 만약 모든 모습이 모습 아님을 본다면 곧 여래를 보리라." },
+      { orig: "若以色見我，以音聲求我，是人行邪道，不能見如來。",
+        en: "[Ch. 26] If one sees me by form, or seeks me by sound, that person walks a mistaken path and cannot see the Tathagata.",
+        ko: "[제26분] 만약 색으로 나를 보거나 음성으로 나를 구한다면, 이 사람은 삿된 길을 걷는 것이니 여래를 볼 수 없으리라." },
+      { orig: "一切有為法，如夢幻泡影，如露亦如電，應作如是觀。",
+        en: "[Ch. 32] All conditioned things are like a dream, an illusion, a bubble, a shadow; like dew and like lightning. Contemplate them in this way.",
+        ko: "[제32분] 모든 유위법은 꿈과 같고 환상과 같고 물거품과 그림자 같으며, 이슬과 같고 또 번개와 같으니, 마땅히 이와 같이 관할지니라." }
+    ]
+  },
+  {
     id: "usnisa",
     title_ko: "불정존승다라니경",
     title_en: "Ushnisha Vijaya Dharani Sutra",

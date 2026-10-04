@@ -33,6 +33,10 @@
       <h2 data-i18n="sutraList"></h2>
       <button id="addBtn" class="btn small" data-i18n="addSutra"></button>
     </div>
+    <div class="side-tools">
+      <button id="reorderBtn" class="btn small ghost" data-i18n="reorder"></button>
+      <button id="resetOrderBtn" class="btn small ghost" data-i18n="reorderReset" hidden></button>
+    </div>
     <ul id="sutraList"></ul>
     <div class="side-foot">
       <button id="exportBtn" class="btn small ghost" data-i18n="export"></button>
@@ -55,6 +59,7 @@
       <h2 id="title"></h2>
       <div class="controls">
         <button id="playBtn" class="btn primary" data-i18n="play"></button>
+        <button id="pauseBtn" class="btn" data-i18n="pause" disabled></button>
         <button id="stopBtn" class="btn" data-i18n="stop"></button>
         <label><span data-i18n="read"></span>
           <select id="mode" data-i18n-title="modeHint">
@@ -63,6 +68,23 @@
             <option value="en" data-i18n="modeEn"></option>
             <option value="ko" data-i18n="modeKo"></option>
           </select>
+        </label>
+        <label><span data-i18n="repeat"></span>
+          <select id="repeat">
+            <option value="1">1</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="7">7</option>
+            <option value="10">10</option>
+            <option value="21">21</option>
+            <option value="108">108</option>
+            <option value="0" data-i18n="repeatInf"></option>
+          </select>
+          <select id="scope" data-i18n-aria="repeatScope">
+            <option value="all" data-i18n="scopeAll"></option>
+            <option value="para" data-i18n="scopePara"></option>
+          </select>
+          <output id="repeatInfo"></output>
         </label>
         <label><span data-i18n="volume"></span>
           <input id="volume" type="range" min="0" max="1" step="0.1" value="1" data-i18n-aria="volume">
@@ -108,6 +130,16 @@
       <button type="submit" class="btn primary" data-i18n="add"></button>
     </menu>
   </form>
+</dialog>
+
+<dialog id="walletDialog">
+  <div class="wdlg">
+    <h2 data-i18n="walletTitle"></h2>
+    <div id="walletChoices"></div>
+    <menu>
+      <button type="button" id="closeWallet" class="btn" data-i18n="close"></button>
+    </menu>
+  </div>
 </dialog>
 
 <script src="i18n.js"></script>
