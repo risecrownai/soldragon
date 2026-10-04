@@ -52,3 +52,30 @@ dialog menu{display:flex;justify-content:flex-end;gap:.5rem;padding:0;margin:0}
 .para .ko{margin:.2rem 0 0}
 .para .en{margin:0}
 #paras[data-mode="en"] .en,#paras[data-mode="ko"] .ko{color:var(--fg);font-size:1.1rem}
+
+/* 문단별 "여기서부터 낭독" 버튼 */
+.para{position:relative}
+.para .go{margin-top:.4rem;background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:.1rem .7rem;font:inherit;font-size:.8rem;cursor:pointer}
+.para .go:hover,.para .go:focus-visible{border-color:var(--gold);color:var(--fg)}
+.para .go:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
+
+/* 순서 변경 */
+.side-tools{display:flex;gap:.4rem}
+#sutraList li.reordering button.item{cursor:default}
+#sutraList .mv{background:none;border:0;color:inherit;cursor:pointer;padding:0 .35rem;font:inherit}
+#sutraList .mv:disabled{opacity:.3;cursor:default}
+#sutraList .mv:focus-visible,#sutraList .del:focus-visible{outline:3px solid var(--rose);outline-offset:1px;border-radius:4px}
+#repeatInfo{min-width:3.5rem;color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* 지갑 선택 */
+.wdlg h2,.wdlg h3{margin:.2rem 0 .5rem}
+.wdlg h3{font-size:.95rem;color:var(--muted)}
+.wdlg menu{display:flex;justify-content:flex-end;padding:0;margin:.8rem 0 0}
+.wlist{list-style:none;margin:0 0 .8rem;padding:0;display:flex;flex-direction:column;gap:.4rem}
+.wlist button,.wlist a{display:flex;align-items:center;gap:.6rem;width:100%;padding:.5rem .8rem;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--fg);font:inherit;text-decoration:none;cursor:pointer;text-align:left}
+.wlist button:hover,.wlist a:hover{border-color:var(--gold)}
+.wlist button:focus-visible,.wlist a:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
+.wlist img{width:24px;height:24px;border-radius:6px}
+.wlist .ph{width:24px;height:24px;border-radius:6px;background:var(--line);flex:none}
+dialog{max-height:90vh;overflow:auto}
