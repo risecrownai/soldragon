@@ -81,3 +81,15 @@ dialog menu{display:flex;justify-content:flex-end;gap:.5rem;padding:0;margin:0}
 dialog{max-height:90vh;overflow:auto}
 .voice-name{max-width:16rem}
 .intro{border-left:4px solid var(--gold);padding:.4rem 1rem;background:var(--panel);border-radius:4px;color:var(--fg)}
+
+/* 경전별 상단 그림 */
+.hero.small{margin-bottom:1rem;padding:.6rem 1rem;gap:1rem}
+.hero.small img{max-height:150px;max-width:32%;height:auto}
+.hero[data-theme="rose"]{background:linear-gradient(135deg,#ffd9e8,#ffe9b8)}
+.hero[data-theme="gold"]{background:linear-gradient(135deg,#ffe9b8,#ffd1e6)}
+.hero[data-theme="blue"]{background:linear-gradient(135deg,#dbeeff,#e8dcff)}
+.hero[data-theme="violet"]{background:linear-gradient(135deg,#e8dcff,#ffd9e8)}
+.hero[data-theme="green"]{background:linear-gradient(135deg,#dff5e6,#ffe9b8)}
+
+/* display를 지정한 요소(.controls label 등)도 hidden 속성이 항상 우선하게 한다 */
+[hidden]{display:none !important}

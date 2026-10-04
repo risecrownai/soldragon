@@ -116,7 +116,7 @@
           if (!confirm(t("delConfirm", titleOf(s)))) return;
           custom = custom.filter((c) => c.id !== s.id);
           saveCustom(custom);
-          if (current && current.id === s.id) { stop(); current = null; $("reader").hidden = true; $("empty").hidden = false; }
+          if (current && current.id === s.id) { stop(); current = null; $("reader").hidden = true; $("homeHero").hidden = false; $("empty").hidden = false; }
           renderList();
         };
         li.append(d);
@@ -142,6 +142,7 @@
     current = all().find((s) => s.id === id);
     if (!current) return;
     $("empty").hidden = true;
+    $("homeHero").hidden = true; // 경전 화면에서는 경전별 그림만 보여 준다
     $("reader").hidden = false;
     renderParas();
     renderList();
@@ -150,9 +151,23 @@
     if (fromUser && $("auto").checked) play(0);
   }
 
+  // 경전에 맞는 상단 그림(부처님, 비로자나불, 관세음보살, 연꽃, 용, 태양 중 선택)
+  function renderHero() {
+    const hero = $("readerHero");
+    hero.textContent = "";
+    hero.dataset.theme = current.heroTheme || "gold";
+    for (const key of current.hero || ["dragon", "sun", "lotus"]) {
+      const img = document.createElement("img");
+      img.src = `images/${key}.svg`;
+      img.alt = t("alt" + key[0].toUpperCase() + key.slice(1));
+      hero.append(img);
+    }
+  }
+
   function renderParas() {
     if (!current) return;
     $("title").textContent = titleOf(current);
+    renderHero();
     const intro = current["intro_" + uiLang] || current.intro_ko || "";
     $("intro").textContent = intro;
     $("intro").hidden = !intro;
@@ -204,26 +219,27 @@
 
   // Web Speech API는 목소리의 성별을 알려 주지 않으므로, 음성 이름으로 추정한다.
   // (Google/Microsoft/Apple 음성의 대표적인 이름. 추정 못 하면 기본 음성을 쓴다.)
-  const FEMALE_RE = /female|woman|여성|女|sun-?hi|yuna|heami|seoyeon|ji-?min|soon-?bok|ting-?ting|mei-?jia|sin-?ji|xiao|hui-?hui|yaoyao|zira|jenny|aria|samantha|karen|moira|tessa|victoria|fiona|susan|hazel|libby|sonia|emma|ava\b|allison|kathy|joanna|salli|kendra|kimberly|ivy|lekha|swara|kalpana|priya|veena|google (한국어|korean|普通话|中文|hindi|हिन्दी|us english)/i;
-  const MALE_RE = /\bmale\b|남성|男|in-?joon|bongjin|gookmin|kang-?kang|yun-?(yang|xi|jian|feng)|david|\bmark\b|alex|daniel|\bfred\b|\bguy\b|ryan|george|james|richard|\btom\b|aaron|arthur|hemant|madhur|rishi/i;
+  const FEMALE_RE = /\bfemale\b|woman|여성|女|sun-?hi|yuna|heami|seoyeon|seo-?hyeon|ji-?min|soon-?bok|yu-?jin|ting-?ting|mei-?jia|sin-?ji|yu-?shu|xiao|hui-?hui|yaoyao|zira|jenny|aria|sara\b|nancy|amber|ashley|jane\b|michelle|samantha|karen|moira|tessa|victoria|fiona|susan|hazel|libby|sonia|emma|ava\b|allison|kathy|joanna|salli|kendra|kimberly|ivy|zoe|kate\b|serena|nicky|catherine|lekha|swara|kalpana|heera|priya|veena|google (한국어|korean|普通话|中文|hindi|हिन्दी|us english)/i;
+  const MALE_RE = /\bmale\b|남성|男|in-?joon|hyun-?su|bongjin|gookmin|kang-?kang|li-?mu|yun-?(yang|xi|jian|feng|hao|ye|ze)|david|\bmark\b|alex\b|daniel|\bfred\b|\bguy\b|davis|jason|tony|ryan|george|james|richard|\btom\b|aaron|arthur|oliver|evan|gordon|brandon|christopher|eric\b|roger|steffan|hemant|madhur|ravi\b|rishi/i;
 
-  // gender: "auto" | "f" | "m". matched=false면 원하는 성별의 음성을 찾지 못해 기본 음성을 쓴 것이다.
-  function pickVoice(lang, gender = "auto") {
+  // 이름으로 성별을 추정한다. 구분할 수 없으면 null.
+  function genderOf(name) {
+    const f = FEMALE_RE.test(name);
+    const m = MALE_RE.test(name);
+    if (f && !m) return "f";
+    if (m && !f) return "m";
+    return null;
+  }
+
+  // 읽을 언어에 맞는 음성. 사용자가 목록에서 직접 고른 음성이 있으면 그것을, 없으면 기기의 기본 음성을 쓴다.
+  function pickVoice(lang) {
     const voices = tts.getVoices();
     const base = lang.split("-")[0];
     const cands = [...voices.filter((v) => v.lang === lang), ...voices.filter((v) => v.lang !== lang && v.lang.startsWith(base))];
-    if (!cands.length) return { voice: null, matched: false };
-    // 사용자가 목록에서 직접 고른 음성이 있으면 성별 추정보다 우선한다.
+    if (!cands.length) return null;
     const saved = lsGet(NAME_KEY + lang);
-    const chosen = saved && cands.find((v) => v.name === saved);
-    if (chosen) return { voice: chosen, matched: true };
-    if (gender === "auto") return { voice: cands[0], matched: true };
-    const re = gender === "f" ? FEMALE_RE : MALE_RE;
-    const other = gender === "f" ? MALE_RE : FEMALE_RE;
-    const hit = cands.find((v) => re.test(v.name) && !(other.test(v.name) && !re.test(v.name)));
-    return hit ? { voice: hit, matched: true } : { voice: cands[0], matched: false };
+    return (saved && cands.find((v) => v.name === saved)) || cands[0];
   }
-  const voiceChoice = () => $("voice").value;
   const NAME_KEY = "sutras.voiceName.";
 
   // 긴 문단은 브라우저가 중간에 끊거나 끝 이벤트를 놓치는 일이 있어 문장 단위로 나눠 읽는다.
@@ -267,11 +283,10 @@
       u.lang = lang;
       u.rate = parseFloat($("rate").value);
       u.volume = parseFloat($("volume").value); // 조각마다 읽으므로 낭독 중에도 볼륨 조절이 반영된다
-      const { voice, matched } = pickVoice(lang, voiceChoice());
+      const voice = pickVoice(lang);
       if (voice) u.voice = voice;
       // 원하는 성별의 음성이 이 기기에 없으면 음높이로 근사한다.
-      const base = matched || voiceChoice() === "auto" ? 1 : voiceChoice() === "f" ? 1.1 : 0.9;
-      u.pitch = Math.min(2, Math.max(0.1, base * parseFloat($("pitch").value)));
+      u.pitch = Math.min(2, Math.max(0.1, parseFloat($("pitch").value)));
       u.onend = () => resolve(true);
       u.onerror = (ev) => resolve(ev && (ev.error === "interrupted" || ev.error === "canceled"));
       tts.speak(u);
@@ -389,17 +404,9 @@
     if (!tts || !current) return;
     const mode = $("mode").value;
     const langs = [(mode === "all" || mode === "orig") && current.lang, mode === "en" && "en-US", mode === "ko" && "ko-KR"].filter(Boolean);
-    const picks = langs.map((l) => pickVoice(l, voiceChoice()));
-    if (picks.some((p) => !p.voice)) showNote("noVoice");
-    else if (voiceChoice() !== "auto" && picks.some((p) => !p.matched)) showNote(voiceChoice() === "f" ? "noFemaleVoice" : "noMaleVoice");
-    else showNote("");
+    showNote(langs.some((l) => !pickVoice(l)) ? "noVoice" : "");
   }
   if (tts) tts.onvoiceschanged = () => { populateVoiceNames(); if (player.state !== "idle") refreshVoiceNote(); };
-
-  const savedVoice = lsGet("sutras.voice");
-  if (savedVoice === "f" || savedVoice === "m") $("voice").value = savedVoice;
-  // 바꾼 목소리는 다음 문장부터 적용된다.
-  $("voice").onchange = () => { lsSet("sutras.voice", $("voice").value); refreshVoiceNote(); };
 
   // 지금 읽을 언어: 원문(+영어+한국어) 모드는 경전 원문 언어, 영어/한국어 모드는 해당 언어
   function readLang() {
@@ -416,18 +423,23 @@
     auto.textContent = t("voiceNameAuto");
     sel.append(auto);
     const lang = readLang();
-    if (!tts || !lang) return;
+    if (!tts || !lang) { $("voiceNameLabel").hidden = true; return; }
     const base = lang.split("-")[0];
-    const list = tts.getVoices().filter((v) => v.lang === lang || v.lang.startsWith(base));
-    for (const v of list) {
+    // 성별을 이름으로 구분할 수 없는 음성은 목록에 보이지 않게 한다.
+    const list = tts.getVoices()
+      .filter((v) => v.lang === lang || v.lang.startsWith(base))
+      .map((v) => [v, genderOf(v.name)])
+      .filter(([, g]) => g);
+    for (const [v, g] of list) {
       const o = document.createElement("option");
       o.value = v.name;
-      const g = FEMALE_RE.test(v.name) ? " ♀" : MALE_RE.test(v.name) ? " ♂" : "";
-      o.textContent = `${v.name}${g}`;
+      o.textContent = `${t(g === "f" ? "voiceFemale" : "voiceMale")} · ${v.name}`;
       sel.append(o);
     }
+    // 고를 수 있는 음성이 없으면 메뉴 자체를 숨긴다(기본 음성으로 읽는다).
+    $("voiceNameLabel").hidden = !list.length;
     const saved = lsGet(NAME_KEY + lang);
-    sel.value = saved && list.some((v) => v.name === saved) ? saved : "";
+    sel.value = saved && list.some(([v]) => v.name === saved) ? saved : "";
   }
   $("voiceName").onchange = () => {
     const lang = readLang();

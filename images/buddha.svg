@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Buddha">
+<defs>
+<linearGradient id="lp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd1e6"/><stop offset="1" stop-color="#e0529c"/></linearGradient>
+<radialGradient id="halo"><stop offset="0" stop-color="#fff7d6"/><stop offset="1" stop-color="#ffdf80"/></radialGradient>
+</defs>
+<circle cx="100" cy="76" r="62" fill="url(#halo)" stroke="#e0a000" stroke-width="2"/>
+<circle cx="100" cy="76" r="52" fill="none" stroke="#f5a623" stroke-width="1.2" stroke-dasharray="3 4"/>
+<g stroke="#9b2c68" stroke-width="1.2" fill="url(#lp)">
+<path d="M100 196 C52 192 28 170 30 150 C62 154 90 170 100 196Z"/>
+<path d="M100 196 C148 192 172 170 170 150 C138 154 110 170 100 196Z"/>
+<path d="M100 196 C64 186 56 160 70 140 C92 152 104 172 100 196Z"/>
+<path d="M100 196 C136 186 144 160 130 140 C108 152 96 172 100 196Z"/>
+<path d="M100 196 C84 180 86 154 100 138 C114 154 116 180 100 196Z"/></g>
+<ellipse cx="100" cy="146" rx="56" ry="17" fill="#e8892b" stroke="#a85a10" stroke-width="1.5"/>
+<path d="M70 102 Q100 90 130 102 L144 146 L56 146Z" fill="#f0a030" stroke="#a85a10" stroke-width="1.5"/>
+<path d="M70 102 Q64 128 86 142 L100 138 L114 142 Q136 128 130 102 Q100 96 70 102Z" fill="#e8892b" stroke="#a85a10" stroke-width="1.2"/>
+<path d="M100 98 L84 144" stroke="#a85a10" stroke-width="1.2" fill="none"/>
+<ellipse cx="100" cy="140" rx="17" ry="7" fill="#f2c28a" stroke="#b9895a" stroke-width="1.2"/>
+<path d="M85 140 q15 8 30 0" fill="none" stroke="#b9895a" stroke-width="1"/>
+<rect x="92" y="88" width="16" height="12" fill="#f2c28a"/>
+<ellipse cx="80.5" cy="72" rx="4.5" ry="11" fill="#f2c28a" stroke="#b9895a" stroke-width="1.2"/>
+<ellipse cx="119.5" cy="72" rx="4.5" ry="11" fill="#f2c28a" stroke="#b9895a" stroke-width="1.2"/>
+<ellipse cx="100" cy="68" rx="18" ry="22" fill="#f2c28a" stroke="#b9895a" stroke-width="1.2"/>
+<path d="M91 67 q4.5 3 9 0 M100 67 q4.5 3 9 0" transform="translate(-4.5 0)" fill="none" stroke="#3b2a1a" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M95 80 q5 4 10 0" fill="none" stroke="#a24b3c" stroke-width="1.8" stroke-linecap="round"/>
+<circle cx="100" cy="58" r="1.8" fill="#d63a2f"/>
+<path d="M82 62 Q82 40 100 40 Q118 40 118 62 Q109 52 100 52 Q91 52 82 62Z" fill="#2b3a67"/>
+<circle cx="100" cy="36" r="9" fill="#2b3a67"/><circle cx="100" cy="30" r="3.2" fill="#f5c542" stroke="#c98f00" stroke-width=".8"/>
+</svg>
