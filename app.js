@@ -198,11 +198,24 @@
   let noteKey = "";
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  function pickVoice(lang) {
+  // Web Speech API는 목소리의 성별을 알려 주지 않으므로, 음성 이름으로 추정한다.
+  // (Google/Microsoft/Apple 음성의 대표적인 이름. 추정 못 하면 기본 음성을 쓴다.)
+  const FEMALE_RE = /female|woman|여성|女|sun-?hi|yuna|heami|seoyeon|ji-?min|soon-?bok|ting-?ting|mei-?jia|sin-?ji|xiao|hui-?hui|yaoyao|zira|jenny|aria|samantha|karen|moira|tessa|victoria|fiona|susan|hazel|libby|sonia|emma|ava\b|allison|kathy|joanna|salli|kendra|kimberly|ivy|lekha|swara|kalpana|priya|veena|google (한국어|korean|普通话|中文|hindi|हिन्दी|us english)/i;
+  const MALE_RE = /\bmale\b|남성|男|in-?joon|bongjin|gookmin|kang-?kang|yun-?(yang|xi|jian|feng)|david|\bmark\b|alex|daniel|\bfred\b|\bguy\b|ryan|george|james|richard|\btom\b|aaron|arthur|hemant|madhur|rishi/i;
+
+  // gender: "auto" | "f" | "m". matched=false면 원하는 성별의 음성을 찾지 못해 기본 음성을 쓴 것이다.
+  function pickVoice(lang, gender = "auto") {
     const voices = tts.getVoices();
     const base = lang.split("-")[0];
-    return voices.find((v) => v.lang === lang) || voices.find((v) => v.lang.startsWith(base)) || null;
+    const cands = [...voices.filter((v) => v.lang === lang), ...voices.filter((v) => v.lang !== lang && v.lang.startsWith(base))];
+    if (!cands.length) return { voice: null, matched: false };
+    if (gender === "auto") return { voice: cands[0], matched: true };
+    const re = gender === "f" ? FEMALE_RE : MALE_RE;
+    const other = gender === "f" ? MALE_RE : FEMALE_RE;
+    const hit = cands.find((v) => re.test(v.name) && !(other.test(v.name) && !re.test(v.name)));
+    return hit ? { voice: hit, matched: true } : { voice: cands[0], matched: false };
   }
+  const voiceChoice = () => $("voice").value;
 
   // 긴 문단은 브라우저가 중간에 끊거나 끝 이벤트를 놓치는 일이 있어 문장 단위로 나눠 읽는다.
   const CHUNK = 160;
@@ -245,8 +258,10 @@
       u.lang = lang;
       u.rate = parseFloat($("rate").value);
       u.volume = parseFloat($("volume").value); // 조각마다 읽으므로 낭독 중에도 볼륨 조절이 반영된다
-      const v = pickVoice(lang);
-      if (v) u.voice = v;
+      const { voice, matched } = pickVoice(lang, voiceChoice());
+      if (voice) u.voice = voice;
+      // 원하는 성별의 음성이 이 기기에 없으면 음높이로 근사한다.
+      u.pitch = matched || voiceChoice() === "auto" ? 1 : voiceChoice() === "f" ? 1.3 : 0.8;
       u.onend = () => resolve(true);
       u.onerror = (ev) => resolve(ev && (ev.error === "interrupted" || ev.error === "canceled"));
       tts.speak(u);
@@ -331,7 +346,7 @@
     Object.assign(player, { state: "playing", para: from, unit: 0, round: 0, start: from });
     const mode = $("mode").value;
     const langs = [(mode === "all" || mode === "orig") && current.lang, mode === "en" && "en-US", mode === "ko" && "ko-KR"].filter(Boolean);
-    showNote(langs.some((l) => !pickVoice(l)) ? "noVoice" : "");
+    refreshVoiceNote();
     updateButtons();
     if (interrupted) sleep(80).then(() => my === token && run(my));
     else run(my);
@@ -359,6 +374,23 @@
     if (player.state !== "idle") finish();
   }
 
+  // 지금 읽을 언어들에 대해 음성이 없거나, 고른 성별의 음성이 없을 때 안내한다.
+  function refreshVoiceNote() {
+    if (!tts || !current) return;
+    const mode = $("mode").value;
+    const langs = [(mode === "all" || mode === "orig") && current.lang, mode === "en" && "en-US", mode === "ko" && "ko-KR"].filter(Boolean);
+    const picks = langs.map((l) => pickVoice(l, voiceChoice()));
+    if (picks.some((p) => !p.voice)) showNote("noVoice");
+    else if (voiceChoice() !== "auto" && picks.some((p) => !p.matched)) showNote(voiceChoice() === "f" ? "noFemaleVoice" : "noMaleVoice");
+    else showNote("");
+  }
+  if (tts) tts.onvoiceschanged = () => { if (player.state !== "idle") refreshVoiceNote(); };
+
+  const savedVoice = lsGet("sutras.voice");
+  if (savedVoice === "f" || savedVoice === "m") $("voice").value = savedVoice;
+  // 바꾼 목소리는 다음 문장부터 적용된다.
+  $("voice").onchange = () => { lsSet("sutras.voice", $("voice").value); refreshVoiceNote(); };
+
   // 안내 문구는 키로 보관해 두었다가 화면 언어가 바뀌면 다시 그린다.
   function showNote(key) {
     noteKey = key;
@@ -374,6 +406,7 @@
   // 낭독 중 읽기 모드를 바꾸면 읽던 문단을 처음부터 다시 읽는다.
   $("mode").onchange = () => {
     applyMode();
+    refreshVoiceNote();
     if (player.state === "playing") {
       player.unit = 0;
       token++;
