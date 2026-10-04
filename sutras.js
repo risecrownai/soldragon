@@ -1,10 +1,11 @@
-// 기본 제공 경전. 각 문단은 { orig, en, ko } (+ 선택적으로 lang: 문단별 원문 낭독 언어).
+// 기본 제공 경전. 제목은 title_ko / title_en. 각 문단은 { orig, en, ko } (+ 선택적으로 lang: 문단별 원문 낭독 언어).
 // orig가 비어 있는 문단은 해설이며 원문 낭독에서 건너뜁니다.
 // 원문 언어(lang)는 낭독용 BCP-47 코드입니다.
 window.DEFAULT_SUTRAS = [
   {
     id: "heart",
-    title: "반야심경 · Heart Sutra",
+    title_ko: "반야심경",
+    title_en: "Heart Sutra",
     lang: "zh-CN",
     origLabel: "漢文 (玄奘 譯)",
     paragraphs: [
@@ -39,7 +40,8 @@ window.DEFAULT_SUTRAS = [
   },
   {
     id: "diamond",
-    title: "금강경 · Diamond Sutra (발췌)",
+    title_ko: "금강경 (발췌)",
+    title_en: "Diamond Sutra (excerpts)",
     lang: "zh-CN",
     origLabel: "漢文 (鳩摩羅什 譯)",
     paragraphs: [
@@ -71,7 +73,8 @@ window.DEFAULT_SUTRAS = [
   },
   {
     id: "usnisa",
-    title: "불정존승다라니경 · Ushnisha Vijaya Dharani",
+    title_ko: "불정존승다라니경",
+    title_en: "Ushnisha Vijaya Dharani Sutra",
     lang: "hi-IN",
     origLabel: "Sanskrit (IAST)",
     paragraphs: [
@@ -100,7 +103,8 @@ window.DEFAULT_SUTRAS = [
   },
   {
     id: "cheonsu",
-    title: "천수경 · Thousand Hands Sutra (발췌)",
+    title_ko: "천수경 (발췌)",
+    title_en: "Thousand Hands Sutra (excerpts)",
     lang: "ko-KR",
     origLabel: "한자 · 진언 (한국 독송본)",
     paragraphs: [
@@ -140,7 +144,8 @@ window.DEFAULT_SUTRAS = [
   },
   {
     id: "dhammapada",
-    title: "법구경 1–3 · Dhammapada",
+    title_ko: "법구경 1–3",
+    title_en: "Dhammapada 1–3",
     lang: "hi-IN",
     origLabel: "Pāli",
     paragraphs: [
@@ -157,7 +162,8 @@ window.DEFAULT_SUTRAS = [
   },
   {
     id: "metta",
-    title: "자애경 · Metta Sutta (발췌)",
+    title_ko: "자애경 (발췌)",
+    title_en: "Metta Sutta (excerpts)",
     lang: "hi-IN",
     origLabel: "Pāli",
     paragraphs: [

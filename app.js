@@ -2,16 +2,45 @@
   const $ = (id) => document.getElementById(id);
   const STORE = "sutras.custom.v1";
 
+  // ---------- 화면 언어 (i18n) ----------
+  const UI_KEY = "sutras.uiLang";
+  const detectLang = () => {
+    try {
+      const saved = localStorage.getItem(UI_KEY);
+      if (saved === "ko" || saved === "en") return saved;
+    } catch { /* 저장소 사용 불가 */ }
+    return (navigator.language || "").toLowerCase().startsWith("ko") ? "ko" : "en";
+  };
+  let uiLang = detectLang();
+  const t = (key, ...args) => {
+    const v = window.I18N[uiLang][key];
+    return typeof v === "function" ? v(...args) : v;
+  };
+  const titleOf = (s) => (s.custom ? s.title : s["title_" + uiLang] || s.title_ko || s.title);
+
+  function applyUiText() {
+    document.documentElement.lang = uiLang;
+    document.title = t("siteTitle");
+    document.querySelector('meta[name="description"]').content = t("siteDesc");
+    document.querySelectorAll("[data-i18n]").forEach((e) => { e.textContent = t(e.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-aria]").forEach((e) => e.setAttribute("aria-label", t(e.dataset.i18nAria)));
+    document.querySelectorAll("[data-i18n-title]").forEach((e) => { e.title = t(e.dataset.i18nTitle); });
+    document.querySelectorAll("[data-i18n-alt]").forEach((e) => { e.alt = t(e.dataset.i18nAlt); });
+    $("uiLang").value = uiLang;
+    $("walletBtn").textContent = t(wallet ? "walletDisconnect" : "walletConnect");
+  }
+
   // ---------- 경전 데이터 ----------
   const loadCustom = () => {
     try { return JSON.parse(localStorage.getItem(STORE)) || []; } catch { return []; }
   };
   const saveCustom = (list) => {
-    try { localStorage.setItem(STORE, JSON.stringify(list)); } catch { alert("브라우저 저장소를 사용할 수 없습니다."); }
+    try { localStorage.setItem(STORE, JSON.stringify(list)); } catch { alert(t("noStorage")); }
   };
   let custom = loadCustom();
   const all = () => [...window.DEFAULT_SUTRAS, ...custom];
   let current = null;
+  let wallet = null;
 
   function renderList() {
     const ul = $("sutraList");
@@ -21,17 +50,17 @@
       if (current && current.id === s.id) li.classList.add("active");
       const b = document.createElement("button");
       b.className = "item";
-      b.textContent = s.title;
+      b.textContent = titleOf(s);
       b.onclick = () => { open(s.id, true); $("sidebar").classList.remove("open"); };
       li.append(b);
       if (s.custom) {
         const d = document.createElement("button");
         d.className = "del";
         d.textContent = "✕";
-        d.title = "삭제";
-        d.setAttribute("aria-label", `${s.title} 삭제`);
+        d.title = t("del");
+        d.setAttribute("aria-label", `${t("del")}: ${titleOf(s)}`);
         d.onclick = () => {
-          if (!confirm(`'${s.title}' 경전을 삭제할까요?`)) return;
+          if (!confirm(t("delConfirm", titleOf(s)))) return;
           custom = custom.filter((c) => c.id !== s.id);
           saveCustom(custom);
           if (current && current.id === s.id) { stop(); current = null; $("reader").hidden = true; $("empty").hidden = false; }
@@ -49,7 +78,15 @@
     if (!current) return;
     $("empty").hidden = true;
     $("reader").hidden = false;
-    $("title").textContent = current.title;
+    renderParas();
+    renderList();
+    // 브라우저 정책상 사용자 클릭 이후에만 자동 재생이 가능합니다.
+    if (fromUser && $("auto").checked) play();
+  }
+
+  function renderParas() {
+    if (!current) return;
+    $("title").textContent = titleOf(current);
     const box = $("paras");
     box.textContent = "";
     current.paragraphs.forEach((p, i) => {
@@ -58,7 +95,7 @@
       d.id = "p" + i;
       const label = document.createElement("div");
       label.className = "orig-label";
-      label.textContent = current.origLabel || "원문";
+      label.textContent = (!current.custom && current.origLabel) || t("origin");
       const o = document.createElement("p");
       o.className = "orig";
       o.lang = current.lang;
@@ -75,13 +112,15 @@
       k.lang = "ko";
       k.textContent = p.ko || "";
       k.hidden = !p.ko;
-      d.append(label, o, e, k);
+      const go = document.createElement("button");
+      go.className = "go";
+      go.textContent = t("fromHere");
+      go.setAttribute("aria-label", t("fromHereAria", i + 1));
+      go.onclick = () => play(i);
+      d.append(label, o, e, k, go);
       box.append(d);
     });
     applyMode();
-    renderList();
-    // 브라우저 정책상 사용자 클릭 이후에만 자동 재생이 가능합니다.
-    if (fromUser && $("auto").checked) play();
   }
 
   // ---------- 낭독 (Web Speech API) ----------
@@ -107,30 +146,41 @@
     });
   }
 
-  async function play() {
-    if (!tts) { showNote("이 브라우저는 음성 낭독을 지원하지 않습니다."); return; }
+  let curIdx = 0;
+
+  async function play(start) {
+    // onclick 핸들러가 이벤트 객체를 넘겨도 숫자일 때만 시작 위치로 쓴다.
+    const from = Number.isInteger(start) ? start : 0;
+    if (!tts) { showNote("ttsUnsupported"); return; }
     if (!current) return;
     stop();
     const my = ++token;
     const mode = $("mode").value;
     const rate = parseFloat($("rate").value);
+    // "원문 + 영어 + 한국어"는 세 언어를 보여 주되 원문만 낭독한다.
     const wantOrig = mode === "all" || mode === "orig";
-    if (wantOrig && !pickVoice(current.lang)) {
-      showNote("이 기기에 원문 언어의 음성이 없어 기본 음성으로 읽을 수 있습니다. 영어·한국어 낭독은 해당 음성이 있으면 정상 작동합니다.");
-    } else showNote("");
-    for (let i = 0; i < current.paragraphs.length; i++) {
+    const wantEn = mode === "en";
+    const wantKo = mode === "ko";
+    const needed = [wantOrig && current.lang, wantEn && "en-US", wantKo && "ko-KR"].filter(Boolean);
+    showNote(needed.some((l) => !pickVoice(l)) ? "noVoice" : "");
+    // 볼륨은 낭독 도중에도 조절할 수 있도록 매번 읽는다.
+    const vol = () => parseFloat($("volume").value);
+    for (let i = from; i < current.paragraphs.length; i++) {
       if (my !== token) return;
       const p = current.paragraphs[i];
+      const parts = [];
+      if (wantOrig && p.orig) parts.push([p.orig, p.lang || current.lang]);
+      if (wantEn && p.en) parts.push([p.en, "en-US"]);
+      if (wantKo && p.ko) parts.push([p.ko, "ko-KR"]);
+      if (!parts.length) continue;
+      curIdx = i;
       const el = $("p" + i);
       el.classList.add("playing");
       el.scrollIntoView({ block: "center", behavior: "smooth" });
-      // 볼륨은 낭독 도중에도 조절할 수 있도록 매번 읽는다.
-      const vol = () => parseFloat($("volume").value);
-      if (wantOrig && p.orig) await speak(p.orig, p.lang || current.lang, rate, vol());
-      if (my !== token) return;
-      if ((mode === "all" || mode === "en") && p.en) await speak(p.en, "en-US", rate, vol());
-      if (my !== token) return;
-      if ((mode === "all" || mode === "ko") && p.ko) await speak(p.ko, "ko-KR", rate, vol());
+      for (const [text, lang] of parts) {
+        if (my !== token) return;
+        await speak(text, lang, rate, vol());
+      }
       el.classList.remove("playing");
     }
   }
@@ -141,17 +191,24 @@
     document.querySelectorAll(".para.playing").forEach((e) => e.classList.remove("playing"));
   }
 
-  function showNote(msg) {
+  // 안내 문구는 키로 보관해 두었다가 화면 언어가 바뀌면 다시 그린다.
+  let noteKey = "";
+  function showNote(key) {
+    noteKey = key;
     const n = $("ttsNote");
-    n.textContent = msg;
-    n.hidden = !msg;
+    n.textContent = key ? t(key) : "";
+    n.hidden = !key;
   }
 
   if (tts) tts.onvoiceschanged = () => {};
   function applyMode() {
     $("paras").dataset.mode = $("mode").value;
   }
-  $("mode").onchange = () => { applyMode(); if (token && tts && tts.speaking) play(); };
+  // 낭독 중 읽기 설정을 바꾸면 지금 읽던 문단부터 다시 읽는다.
+  $("mode").onchange = () => {
+    applyMode();
+    if (tts && (tts.speaking || document.querySelector(".para.playing"))) play(curIdx);
+  };
 
   try {
     const v = localStorage.getItem("sutras.volume");
@@ -164,7 +221,7 @@
   };
   showVolume();
 
-  $("playBtn").onclick = play;
+  $("playBtn").onclick = () => play(0);
   $("stopBtn").onclick = stop;
   window.addEventListener("pagehide", stop);
 
@@ -185,7 +242,6 @@
       custom: true,
       title: f.get("title").trim(),
       lang: f.get("lang"),
-      origLabel: "원문",
       paragraphs: o.map((orig, i) => ({ orig, en: e[i] || "", ko: k[i] || "" })),
     };
     custom.push(sutra);
@@ -218,7 +274,6 @@
           custom: true,
           title: s.title.slice(0, 100),
           lang: typeof s.lang === "string" ? s.lang : "en-US",
-          origLabel: "원문",
           paragraphs: s.paragraphs
             .filter((p) => p && typeof p.orig === "string")
             .map((p) => ({
@@ -231,9 +286,9 @@
       }
       saveCustom(custom);
       renderList();
-      alert(`${n}개 경전을 가져왔습니다.`);
+      alert(t("imported", n));
     } catch {
-      alert("올바른 JSON 파일이 아닙니다.");
+      alert(t("badJson"));
     }
   };
 
@@ -245,7 +300,6 @@
     ["Solflare", window.solflare && window.solflare.isSolflare ? window.solflare : null, "https://solflare.com/"],
     ["Backpack", window.backpack && window.backpack.isBackpack ? window.backpack : null, "https://backpack.app/"],
   ];
-  let wallet = null;
 
   const short = (a) => a.slice(0, 4) + "…" + a.slice(-4);
 
@@ -274,20 +328,20 @@
   function onDisconnect() {
     wallet = null;
     $("walletInfo").hidden = true;
-    $("walletBtn").textContent = "지갑 연결";
+    $("walletBtn").textContent = t("walletConnect");
   }
 
   async function connect() {
     const found = providers().filter(([, p]) => p);
     if (!found.length) {
-      alert("솔라나 지갑이 감지되지 않았습니다. Phantom, Solflare, Backpack 중 하나를 설치한 뒤 새로고침하세요.");
+      alert(t("walletNone"));
       window.open(providers()[0][2], "_blank", "noopener");
       return;
     }
     let pick = found[0];
     if (found.length > 1) {
       const names = found.map(([n], i) => `${i + 1}. ${n}`).join("\n");
-      const n = parseInt(prompt(`연결할 지갑 번호를 입력하세요:\n${names}`, "1"), 10);
+      const n = parseInt(prompt(t("walletPick", names), "1"), 10);
       if (!found[n - 1]) return;
       pick = found[n - 1];
     }
@@ -296,11 +350,11 @@
       const r = await provider.connect();
       const pk = (r && r.publicKey) || provider.publicKey;
       wallet = { name: pick[0], provider, addr: pk.toString() };
-      $("walletBtn").textContent = "연결 해제";
+      $("walletBtn").textContent = t("walletDisconnect");
       provider.on && provider.on("disconnect", onDisconnect);
       await refreshInfo();
     } catch (e) {
-      alert("지갑 연결이 취소되었거나 실패했습니다.");
+      alert(t("walletFail"));
     }
   }
 
@@ -312,6 +366,16 @@
   };
   $("network").onchange = refreshInfo;
 
-  // ---------- 시작 ----------
+  // ---------- 화면 언어 전환 / 시작 ----------
+  $("uiLang").onchange = () => {
+    uiLang = $("uiLang").value;
+    try { localStorage.setItem(UI_KEY, uiLang); } catch { /* ignore */ }
+    applyUiText();
+    renderList();
+    renderParas();
+    showNote(noteKey);
+  };
+
+  applyUiText();
   renderList();
 })();
