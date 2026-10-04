@@ -153,6 +153,9 @@
   function renderParas() {
     if (!current) return;
     $("title").textContent = titleOf(current);
+    const intro = current["intro_" + uiLang] || current.intro_ko || "";
+    $("intro").textContent = intro;
+    $("intro").hidden = !intro;
     const box = $("paras");
     box.textContent = "";
     current.paragraphs.forEach((p, i) => {
