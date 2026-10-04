@@ -1,4 +1,4 @@
-// 기본 제공 경전. 제목은 title_ko / title_en. 각 문단은 { orig, en, ko } (+ 선택적으로 lang: 문단별 원문 낭독 언어).
+// 기본 제공 경전. 제목은 title_ko / title_en, 상단 그림은 hero(images/<이름>.svg 3개)와 heroTheme(배경색). 각 문단은 { orig, en, ko } (+ 선택적으로 lang: 문단별 원문 낭독 언어).
 // intro_ko / intro_en: 경전 상단에 보여 주는 해설(낭독하지 않음).
 // 원문 언어(lang)는 낭독용 BCP-47 코드입니다.
 window.DEFAULT_SUTRAS = [
@@ -8,6 +8,8 @@ window.DEFAULT_SUTRAS = [
     title_en: "Heart Sutra",
     lang: "zh-CN",
     origLabel: "漢文 (玄奘 譯)",
+    hero: ["avalokiteshvara", "sun", "lotus"],
+    heroTheme: "rose",
     paragraphs: [
       { orig: "觀自在菩薩，行深般若波羅蜜多時，照見五蘊皆空，度一切苦厄。",
         en: "When Avalokiteshvara Bodhisattva was practicing the profound Prajnaparamita, he illuminated the five skandhas and saw that they are all empty, and he crossed beyond all suffering.",
@@ -44,6 +46,8 @@ window.DEFAULT_SUTRAS = [
     title_en: "Diamond Sutra (excerpts)",
     lang: "zh-CN",
     origLabel: "漢文 (鳩摩羅什 譯)",
+    hero: ["buddha", "sun", "lotus"],
+    heroTheme: "gold",
     paragraphs: [
       { orig: "如是我聞：一時，佛在舍衛國祇樹給孤獨園，與大比丘眾千二百五十人俱。爾時，世尊食時，著衣持缽，入舍衛大城乞食。於其城中次第乞已，還至本處。飯食訖，收衣缽，洗足已，敷座而坐。",
         en: "Thus have I heard. At one time the Buddha was in Shravasti, in the Jeta Grove in Anathapindika's garden, together with an assembly of 1,250 great monks. At mealtime the World-Honored One put on his robe, took his bowl, and entered the great city of Shravasti to beg for food. After begging in order throughout the city, he returned to his place. When the meal was finished, he put away his robe and bowl, washed his feet, arranged his seat and sat down.",
@@ -77,6 +81,8 @@ window.DEFAULT_SUTRAS = [
     title_en: "Diamond Sutra Four-Line Verses",
     lang: "zh-CN",
     origLabel: "漢文 (鳩摩羅什 譯)",
+    hero: ["lotus", "buddha", "sun"],
+    heroTheme: "blue",
     intro_en: "The Diamond Sutra says that even receiving, upholding and teaching a single four-line verse (四句偈) of this sutra brings great merit. Below are the three verses most widely recited from it: chapters 5, 26 and 32.",
     intro_ko: "금강경은 이 경의 사구게 하나만이라도 받아 지니고 남을 위해 설해 주면 큰 복덕이 있다고 말합니다. 아래는 이 경에서 가장 널리 독송되는 세 게송으로, 제5분(여리실견분), 제26분(법신비상분), 제32분(응화비진분)의 게송입니다.",
     paragraphs: [
@@ -97,6 +103,8 @@ window.DEFAULT_SUTRAS = [
     title_en: "Ushnisha Vijaya Dharani Sutra",
     lang: "hi-IN",
     origLabel: "Sanskrit (IAST)",
+    hero: ["sun", "vairocana", "lotus"],
+    heroTheme: "violet",
     intro_en: "Background: In the Heaven of the Thirty-three, the deva Good Abode (Supratishthita) learned that he had only seven days to live and would then be reborn in lower realms. Terrified, he sought help from Indra, who appealed to the Buddha. The Buddha taught the Ushnisha Vijaya Dharani, which purifies karmic obstructions and lengthens life. (Summary only. The full sutra text is not included here; you can add it with the \"Add sutra\" button.)",
     intro_ko: "배경: 도리천의 선주(善住) 천자는 자신의 수명이 이레밖에 남지 않았고 그 뒤에는 악도에 태어난다는 것을 알고 두려워하여 제석천에게 도움을 청했습니다. 제석천이 부처님께 여쭙자, 부처님께서 죄업의 장애를 깨끗이 하고 수명을 늘려 주는 불정존승다라니를 설하셨습니다. (요약입니다. 경 전문은 포함되어 있지 않으며, ‘경전 추가’로 직접 넣을 수 있습니다.)",
     paragraphs: [
@@ -126,6 +134,8 @@ window.DEFAULT_SUTRAS = [
     title_en: "Thousand Hands Sutra (excerpts)",
     lang: "ko-KR",
     origLabel: "한자 · 진언 (한국 독송본)",
+    hero: ["lotus", "avalokiteshvara", "dragon"],
+    heroTheme: "green",
     paragraphs: [
       { orig: "修利修利 摩訶修利 修修利 娑婆訶",
         lang: "ko-KR",
@@ -167,6 +177,8 @@ window.DEFAULT_SUTRAS = [
     title_en: "Dhammapada 1–3",
     lang: "hi-IN",
     origLabel: "Pāli",
+    hero: ["sun", "buddha", "lotus"],
+    heroTheme: "gold",
     paragraphs: [
       { orig: "Manopubbaṅgamā dhammā, manoseṭṭhā manomayā. Manasā ce paduṭṭhena, bhāsati vā karoti vā; tato naṃ dukkhamanveti, cakkaṃva vahato padaṃ.",
         en: "Mind precedes all things; mind is their chief, they are made by mind. If one speaks or acts with a corrupted mind, suffering follows, as the wheel follows the foot of the ox.",
@@ -185,6 +197,8 @@ window.DEFAULT_SUTRAS = [
     title_en: "Metta Sutta (excerpts)",
     lang: "hi-IN",
     origLabel: "Pāli",
+    hero: ["lotus", "avalokiteshvara", "lotus"],
+    heroTheme: "rose",
     paragraphs: [
       { orig: "Sabbe sattā bhavantu sukhitattā.",
         en: "May all beings be happy.",

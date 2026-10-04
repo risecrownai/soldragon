@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Vairocana Buddha">
+<defs>
+<linearGradient id="lp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd1e6"/><stop offset="1" stop-color="#e0529c"/></linearGradient>
+<radialGradient id="halo"><stop offset="0" stop-color="#fff7d6"/><stop offset="1" stop-color="#cfe6ff"/></radialGradient>
+</defs>
+<g stroke="#f5a623" stroke-width="2" stroke-linecap="round" opacity=".85"><line x1="100" y1="76" x2="178.0" y2="76.0" /><line x1="100" y1="76" x2="172.1" y2="105.8" /><line x1="100" y1="76" x2="155.2" y2="131.2" /><line x1="100" y1="76" x2="129.8" y2="148.1" /><line x1="100" y1="76" x2="100.0" y2="154.0" /><line x1="100" y1="76" x2="70.2" y2="148.1" /><line x1="100" y1="76" x2="44.8" y2="131.2" /><line x1="100" y1="76" x2="27.9" y2="105.8" /><line x1="100" y1="76" x2="22.0" y2="76.0" /><line x1="100" y1="76" x2="27.9" y2="46.2" /><line x1="100" y1="76" x2="44.8" y2="20.8" /><line x1="100" y1="76" x2="70.2" y2="3.9" /><line x1="100" y1="76" x2="100.0" y2="-2.0" /><line x1="100" y1="76" x2="129.8" y2="3.9" /><line x1="100" y1="76" x2="155.2" y2="20.8" /><line x1="100" y1="76" x2="172.1" y2="46.2" /></g>
+<circle cx="100" cy="76" r="60" fill="url(#halo)" stroke="#d98200" stroke-width="2"/>
+<circle cx="100" cy="76" r="48" fill="none" stroke="#6aa6e0" stroke-width="1.6"/>
+<circle cx="100" cy="76" r="40" fill="none" stroke="#f5a623" stroke-width="1" stroke-dasharray="2 4"/>
+<g stroke="#9b2c68" stroke-width="1.2" fill="url(#lp)">
+<path d="M100 196 C52 192 28 170 30 150 C62 154 90 170 100 196Z"/>
+<path d="M100 196 C148 192 172 170 170 150 C138 154 110 170 100 196Z"/>
+<path d="M100 196 C64 186 56 160 70 140 C92 152 104 172 100 196Z"/>
+<path d="M100 196 C136 186 144 160 130 140 C108 152 96 172 100 196Z"/>
+<path d="M100 196 C84 180 86 154 100 138 C114 154 116 180 100 196Z"/></g>
+<ellipse cx="100" cy="146" rx="56" ry="17" fill="#3a76b8" stroke="#1f4a80" stroke-width="1.5"/>
+<path d="M70 102 Q100 90 130 102 L144 146 L56 146Z" fill="#4d8ed0" stroke="#1f4a80" stroke-width="1.5"/>
+<path d="M70 102 Q70 128 88 126 L100 116 L112 126 Q130 128 130 102 Q100 96 70 102Z" fill="#3a76b8" stroke="#1f4a80" stroke-width="1.2"/>
+<path d="M78 112 L122 112 M84 122 L116 122" stroke="#f5c542" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<circle cx="100" cy="118" r="7" fill="#fdf0dc" stroke="#b9895a" stroke-width="1.2"/>
+<rect x="97" y="107" width="6" height="11" rx="3" fill="#fdf0dc" stroke="#b9895a" stroke-width="1.2"/>
+<rect x="92" y="88" width="16" height="12" fill="#fdf0dc"/>
+<ellipse cx="80.5" cy="72" rx="4.5" ry="11" fill="#fdf0dc" stroke="#b9895a" stroke-width="1.2"/>
+<ellipse cx="119.5" cy="72" rx="4.5" ry="11" fill="#fdf0dc" stroke="#b9895a" stroke-width="1.2"/>
+<ellipse cx="100" cy="68" rx="18" ry="22" fill="#fdf0dc" stroke="#b9895a" stroke-width="1.2"/>
+<path d="M91 67 q4.5 3 9 0 M100 67 q4.5 3 9 0" transform="translate(-4.5 0)" fill="none" stroke="#3b2a1a" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M95 80 q5 4 10 0" fill="none" stroke="#a24b3c" stroke-width="1.8" stroke-linecap="round"/>
+<circle cx="100" cy="58" r="1.8" fill="#d63a2f"/>
+<path d="M82 60 Q82 42 100 42 Q118 42 118 60 Q109 52 100 52 Q91 52 82 60Z" fill="#2b3a67"/>
+<path d="M80 50 L84 30 L92 40 L100 22 L108 40 L116 30 L120 50Z" fill="#f5c542" stroke="#c98f00" stroke-width="1.4" stroke-linejoin="round"/>
+<circle cx="100" cy="33" r="3.2" fill="#d63a2f"/><circle cx="87" cy="42" r="2.2" fill="#3a76b8"/><circle cx="113" cy="42" r="2.2" fill="#3a76b8"/>
+</svg>

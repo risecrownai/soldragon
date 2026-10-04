@@ -49,13 +49,14 @@
   </aside>
 
   <main id="main">
-    <section class="hero">
+    <section id="homeHero" class="hero">
       <img src="images/dragon.svg" data-i18n-alt="altDragon" alt="" class="hero-dragon">
       <img src="images/sun.svg" data-i18n-alt="altSun" alt="" class="hero-sun">
       <img src="images/lotus.svg" data-i18n-alt="altLotus" alt="" class="hero-lotus">
     </section>
 
     <section id="reader" hidden>
+      <div id="readerHero" class="hero small"></div>
       <h2 id="title"></h2>
       <div class="controls">
         <button id="playBtn" class="btn primary" data-i18n="play"></button>
@@ -86,14 +87,7 @@
           </select>
           <output id="repeatInfo"></output>
         </label>
-        <label><span data-i18n="voice"></span>
-          <select id="voice" data-i18n-title="voiceHint">
-            <option value="auto" data-i18n="voiceAuto"></option>
-            <option value="f" data-i18n="voiceFemale"></option>
-            <option value="m" data-i18n="voiceMale"></option>
-          </select>
-        </label>
-        <label><span data-i18n="voiceName"></span>
+        <label id="voiceNameLabel" hidden><span data-i18n="voiceName"></span>
           <select id="voiceName" class="voice-name"></select>
         </label>
         <label><span data-i18n="pitch"></span>
