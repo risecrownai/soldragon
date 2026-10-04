@@ -145,6 +145,7 @@
     $("reader").hidden = false;
     renderParas();
     renderList();
+    populateVoiceNames();
     // 브라우저 정책상 사용자 클릭 이후에만 자동 재생이 가능합니다.
     if (fromUser && $("auto").checked) play(0);
   }
@@ -152,6 +153,9 @@
   function renderParas() {
     if (!current) return;
     $("title").textContent = titleOf(current);
+    const intro = current["intro_" + uiLang] || current.intro_ko || "";
+    $("intro").textContent = intro;
+    $("intro").hidden = !intro;
     const box = $("paras");
     box.textContent = "";
     current.paragraphs.forEach((p, i) => {
@@ -209,6 +213,10 @@
     const base = lang.split("-")[0];
     const cands = [...voices.filter((v) => v.lang === lang), ...voices.filter((v) => v.lang !== lang && v.lang.startsWith(base))];
     if (!cands.length) return { voice: null, matched: false };
+    // 사용자가 목록에서 직접 고른 음성이 있으면 성별 추정보다 우선한다.
+    const saved = lsGet(NAME_KEY + lang);
+    const chosen = saved && cands.find((v) => v.name === saved);
+    if (chosen) return { voice: chosen, matched: true };
     if (gender === "auto") return { voice: cands[0], matched: true };
     const re = gender === "f" ? FEMALE_RE : MALE_RE;
     const other = gender === "f" ? MALE_RE : FEMALE_RE;
@@ -216,6 +224,7 @@
     return hit ? { voice: hit, matched: true } : { voice: cands[0], matched: false };
   }
   const voiceChoice = () => $("voice").value;
+  const NAME_KEY = "sutras.voiceName.";
 
   // 긴 문단은 브라우저가 중간에 끊거나 끝 이벤트를 놓치는 일이 있어 문장 단위로 나눠 읽는다.
   const CHUNK = 160;
@@ -261,7 +270,8 @@
       const { voice, matched } = pickVoice(lang, voiceChoice());
       if (voice) u.voice = voice;
       // 원하는 성별의 음성이 이 기기에 없으면 음높이로 근사한다.
-      u.pitch = matched || voiceChoice() === "auto" ? 1 : voiceChoice() === "f" ? 1.3 : 0.8;
+      const base = matched || voiceChoice() === "auto" ? 1 : voiceChoice() === "f" ? 1.1 : 0.9;
+      u.pitch = Math.min(2, Math.max(0.1, base * parseFloat($("pitch").value)));
       u.onend = () => resolve(true);
       u.onerror = (ev) => resolve(ev && (ev.error === "interrupted" || ev.error === "canceled"));
       tts.speak(u);
@@ -384,12 +394,56 @@
     else if (voiceChoice() !== "auto" && picks.some((p) => !p.matched)) showNote(voiceChoice() === "f" ? "noFemaleVoice" : "noMaleVoice");
     else showNote("");
   }
-  if (tts) tts.onvoiceschanged = () => { if (player.state !== "idle") refreshVoiceNote(); };
+  if (tts) tts.onvoiceschanged = () => { populateVoiceNames(); if (player.state !== "idle") refreshVoiceNote(); };
 
   const savedVoice = lsGet("sutras.voice");
   if (savedVoice === "f" || savedVoice === "m") $("voice").value = savedVoice;
   // 바꾼 목소리는 다음 문장부터 적용된다.
   $("voice").onchange = () => { lsSet("sutras.voice", $("voice").value); refreshVoiceNote(); };
+
+  // 지금 읽을 언어: 원문(+영어+한국어) 모드는 경전 원문 언어, 영어/한국어 모드는 해당 언어
+  function readLang() {
+    const mode = $("mode").value;
+    return mode === "en" ? "en-US" : mode === "ko" ? "ko-KR" : current && current.lang;
+  }
+
+  // 이 기기에 설치된 실제 음성 중 읽을 언어에 맞는 것을 목록으로 보여 준다.
+  function populateVoiceNames() {
+    const sel = $("voiceName");
+    sel.textContent = "";
+    const auto = document.createElement("option");
+    auto.value = "";
+    auto.textContent = t("voiceNameAuto");
+    sel.append(auto);
+    const lang = readLang();
+    if (!tts || !lang) return;
+    const base = lang.split("-")[0];
+    const list = tts.getVoices().filter((v) => v.lang === lang || v.lang.startsWith(base));
+    for (const v of list) {
+      const o = document.createElement("option");
+      o.value = v.name;
+      const g = FEMALE_RE.test(v.name) ? " ♀" : MALE_RE.test(v.name) ? " ♂" : "";
+      o.textContent = `${v.name}${g}`;
+      sel.append(o);
+    }
+    const saved = lsGet(NAME_KEY + lang);
+    sel.value = saved && list.some((v) => v.name === saved) ? saved : "";
+  }
+  $("voiceName").onchange = () => {
+    const lang = readLang();
+    if (!lang) return;
+    try {
+      if ($("voiceName").value) localStorage.setItem(NAME_KEY + lang, $("voiceName").value);
+      else localStorage.removeItem(NAME_KEY + lang);
+    } catch { /* ignore */ }
+    refreshVoiceNote();
+  };
+
+  const savedPitch = lsGet("sutras.pitch");
+  if (savedPitch !== null) $("pitch").value = savedPitch;
+  const showPitch = () => { $("pitchOut").textContent = parseFloat($("pitch").value).toFixed(2); };
+  $("pitch").oninput = () => { showPitch(); lsSet("sutras.pitch", $("pitch").value); };
+  showPitch();
 
   // 안내 문구는 키로 보관해 두었다가 화면 언어가 바뀌면 다시 그린다.
   function showNote(key) {
@@ -406,6 +460,7 @@
   // 낭독 중 읽기 모드를 바꾸면 읽던 문단을 처음부터 다시 읽는다.
   $("mode").onchange = () => {
     applyMode();
+    populateVoiceNames();
     refreshVoiceNote();
     if (player.state === "playing") {
       player.unit = 0;
@@ -695,6 +750,7 @@
     applyUiText();
     renderList();
     renderParas();
+    populateVoiceNames();
     showNote(noteKey);
     if ($("walletDialog").open) renderWalletChoices();
   };

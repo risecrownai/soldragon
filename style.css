@@ -79,3 +79,5 @@ dialog menu{display:flex;justify-content:flex-end;gap:.5rem;padding:0;margin:0}
 .wlist img{width:24px;height:24px;border-radius:6px}
 .wlist .ph{width:24px;height:24px;border-radius:6px;background:var(--line);flex:none}
 dialog{max-height:90vh;overflow:auto}
+.voice-name{max-width:16rem}
+.intro{border-left:4px solid var(--gold);padding:.4rem 1rem;background:var(--panel);border-radius:4px;color:var(--fg)}
