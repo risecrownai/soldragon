@@ -910,20 +910,20 @@
   }
 
   let lastError = null; // 진단 정보용
+  // 가장 중요한 정보(마지막 오류, 등록된 지갑)를 맨 위에 둔다. 일부만 복사해도 원인이 들어가도록.
   function diagText() {
-    const lines = [
-      `site: ${location.origin}`,
-      `ua: ${navigator.userAgent}`,
-      `metamask sdk: ${mmState}`,
-      "registered wallets:",
-    ];
+    const bp = window.backpack;
+    const lines = [];
+    lines.push(lastError ? `last error (${lastError.wallet}): ${lastError.raw}` : "last error: (none)");
+    lines.push("registered wallets:");
     for (const w of standardWallets) {
       lines.push(`- ${w.name} | chains: ${(w.chains || []).join(",")} | features: ${Object.keys(w.features || {}).join(",")}`);
     }
     if (!standardWallets.length) lines.push("- (none)");
-    const bp = window.backpack;
     lines.push(`legacy: window.backpack=${!!bp} (isBackpack=${!!(bp && bp.isBackpack)}, connect=${typeof (bp && bp.connect)}, solana=${typeof (bp && bp.solana)}) window.ethereum.isMetaMask=${!!(window.ethereum && window.ethereum.isMetaMask)}`);
-    if (lastError) lines.push(`last error (${lastError.wallet}): ${lastError.raw}`);
+    lines.push(`metamask sdk: ${mmState}`);
+    lines.push(`site: ${location.origin}`);
+    lines.push(`ua: ${navigator.userAgent}`);
     return lines.join("\n");
   }
   let diagOpen = false;
