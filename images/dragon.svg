@@ -1,13 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160" role="img" aria-label="Dragon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 0 312 160" role="img" aria-label="Dragon">
+<defs><radialGradient id="pearl" cx=".38" cy=".35" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#bfeaff"/><stop offset="1" stop-color="#4aa8e0"/></radialGradient></defs>
 <g fill="none" stroke="#c0392b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
 <path d="M270 120 C230 150 200 100 170 120 C140 140 120 80 90 95 C70 105 60 80 70 62"/>
 </g>
 <g fill="#c0392b" stroke="#7b1d14" stroke-width="2">
 <path d="M70 62 C50 40 60 20 88 22 C100 24 108 34 104 46 C98 58 84 66 70 62Z"/>
 <path d="M92 24 L100 6 L106 28Z"/><path d="M80 24 L76 6 L90 22Z"/>
-<path d="M60 52 L36 58 L56 66Z"/>
 <path d="M195 118 l8 -22 l8 22Z M150 124 l8 -22 l8 22Z M110 96 l7 -20 l8 20Z"/>
 </g>
 <circle cx="88" cy="36" r="4" fill="#fff3c4"/><circle cx="89" cy="36" r="2" fill="#222"/>
-<path d="M54 58 Q38 74 30 70 M56 62 Q44 84 34 82" fill="none" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
+<!-- 여의주: 후광과 불꽃 → 입 안 → 구슬 → 아래턱·윗턱 순으로 그려 위아래 턱이 구슬 뒤쪽을 문 모습 -->
+<circle cx="36" cy="59" r="23" fill="#ffe27a" opacity=".42"/>
+<g fill="#ff9d2e" stroke="#e8590c" stroke-width="1" stroke-linejoin="round">
+<path d="M36 36 c-5 -4 -3 -10 1 -14 c0 6 5 6 6 12z"/>
+<path d="M17 44 c-7 0 -10 -6 -7 -11 c4 5 9 4 12 6z"/>
+<path d="M10 62 c-7 3 -12 -2 -11 -7 c5 4 8 3 13 1z"/>
+<path d="M52 38 c5 -5 10 -1 10 4 c-5 -2 -8 -1 -10 1z"/>
+<path d="M17 80 c-6 1 -10 -4 -8 -8 c4 3 8 2 11 1z"/>
+</g>
+<path d="M64 46 L40 52 L38 67 L62 66Z" fill="#5a0f0a"/>
+<circle cx="36" cy="59" r="11.5" fill="url(#pearl)" stroke="#2f9bd8" stroke-width="1.7"/>
+<ellipse cx="32" cy="54.5" rx="4" ry="2.6" fill="#fff" opacity=".9"/>
+<path d="M62 63 L37 66 L56 77Z" fill="#c0392b" stroke="#7b1d14" stroke-width="2" stroke-linejoin="round"/>
+<path d="M64 46 L37 52 L58 61Z" fill="#c0392b" stroke="#7b1d14" stroke-width="2" stroke-linejoin="round"/>
+<g fill="#fff" stroke="#7b1d14" stroke-width=".7"><path d="M42 54 l2.6 6 l2.6 -6z"/><path d="M46 67 l2.6 -6 l2.6 6z"/></g>
+<g fill="none" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"><path d="M60 77 Q54 90 42 91"/><path d="M63 77 Q61 97 51 103"/></g>
 </svg>
