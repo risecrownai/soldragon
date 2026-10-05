@@ -725,13 +725,14 @@
 
   $("menuBtn").onclick = () => $("sidebar").classList.toggle("open");
 
-  // ---------- 솔라나 지갑 ----------
-  // Wallet Standard: 확장 프로그램/앱 내장 브라우저의 지갑이 스스로 등록한다.
-  // Phantom, Solflare, Backpack, Jupiter, MetaMask 등 표준을 따르는 지갑이 자동으로 목록에 나타난다.
+  // ---------- 솔라나 지갑 (Jupiter, Backpack, MetaMask) ----------
+  // Wallet Standard: 지갑이 스스로 등록하는 방식. 이 사이트는 Jupiter, Backpack, MetaMask만 지원한다.
+  const ALLOWED = /jupiter|backpack|metamask/i;
   const standardWallets = [];
   const registry = {
     register(...ws) {
       for (const w of ws) if (!standardWallets.includes(w)) standardWallets.push(w);
+      refreshWalletDialog(); // 늦게 등록되는 지갑도 열려 있는 창에 반영한다
       return () => {};
     },
   };
@@ -745,30 +746,80 @@
   const isSolana = (w) =>
     (w.chains || []).some((c) => String(c).startsWith("solana:")) && w.features && w.features["standard:connect"];
 
-  // 표준을 아직 따르지 않는 구형 주입 provider
+  // 표준을 아직 따르지 않는 구형 주입 provider (Backpack)
+  const legacyProvidersFor = (name) => {
+    if (!/backpack/i.test(name) || !window.backpack) return [];
+    // Backpack은 버전에 따라 window.backpack 또는 window.backpack.solana에 연결 함수가 있다.
+    return [window.backpack, window.backpack.solana].filter((p) => p && typeof p.connect === "function");
+  };
   const legacy = () => [
-    ["Phantom", window.phantom && window.phantom.solana && window.phantom.solana.isPhantom ? window.phantom.solana : null],
-    ["Solflare", window.solflare && window.solflare.isSolflare ? window.solflare : null],
     ["Backpack", window.backpack && window.backpack.isBackpack ? window.backpack : null],
   ].filter(([, p]) => p);
 
+  // 같은 이름의 솔라나 지갑이 여러 개 등록될 수 있다(예: MetaMask 확장 프로그램이 직접 등록한 것 + 이 사이트가 SDK로 등록한 것).
+  // 이름별로 묶어 두고, 하나가 실패하면(거절이 아니라면) 다음 것으로 이어서 시도한다.
   function detectedWallets() {
-    const list = standardWallets.filter(isSolana).map((w) => ({
-      name: w.name,
-      icon: w.icon,
-      async connect() {
-        const r = await w.features["standard:connect"].connect();
-        const acct = (r && r.accounts && r.accounts[0]) || w.accounts[0];
-        if (!acct) throw new Error("no account");
-        const ev = w.features["standard:events"];
-        if (ev) ev.on("change", ({ accounts }) => { if (accounts && !accounts.length) onDisconnect(); });
-        return acct.address;
-      },
-      async disconnect() {
-        const d = w.features["standard:disconnect"];
-        if (d) await d.disconnect();
-      },
-    }));
+    const groups = new Map();
+    for (const w of standardWallets.filter(isSolana)) {
+      if (!ALLOWED.test(w.name)) continue;
+      const key = w.name.toLowerCase();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(w);
+    }
+
+    const viaStandard = async (w) => {
+      const r = await w.features["standard:connect"].connect();
+      const acct = (r && r.accounts && r.accounts[0]) || (w.accounts && w.accounts[0]);
+      if (!acct) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
+      const ev = w.features["standard:events"];
+      if (ev) ev.on("change", ({ accounts }) => { if (accounts && !accounts.length) onDisconnect(); });
+      return acct.address;
+    };
+
+    const list = [];
+    for (const ws of groups.values()) {
+      const lps = legacyProvidersFor(ws[0].name);
+      let connectedWith = null; // 연결에 성공한 방식(해제할 때 사용)
+      list.push({
+        name: ws[0].name,
+        icon: ws[0].icon,
+        async connect() {
+          let first = null;
+          for (const w of ws) {
+            try {
+              const addr = await viaStandard(w);
+              connectedWith = w;
+              return addr;
+            } catch (e) {
+              if (isRejection(e)) throw e; // 사용자가 거절했으면 다른 방식을 더 시도하지 않는다
+              if (!first) first = e;
+              else first.fallbackError = e;
+            }
+          }
+          // 그래도 안 되면 같은 지갑의 구형 주입 provider로 시도한다.
+          for (const lp of lps) {
+            try {
+              const r = await lp.connect();
+              const pk = (r && r.publicKey) || lp.publicKey;
+              if (!pk) throw new Error("no publicKey");
+              connectedWith = lp;
+              return pk.toString();
+            } catch (e2) {
+              if (isRejection(e2)) throw e2;
+              first.fallbackError = e2;
+            }
+          }
+          throw first;
+        },
+        async disconnect() {
+          const w = connectedWith;
+          if (!w) return;
+          const d = w.features && w.features["standard:disconnect"];
+          if (d) await d.disconnect();
+          else if (w.disconnect) await w.disconnect();
+        },
+      });
+    }
     for (const [name, p] of legacy()) {
       if (list.some((x) => x.name.toLowerCase() === name.toLowerCase())) continue;
       list.push({
@@ -776,6 +827,7 @@
         async connect() {
           const r = await p.connect();
           const pk = (r && r.publicKey) || p.publicKey;
+          if (!pk) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
           if (p.on) p.on("disconnect", onDisconnect);
           return pk.toString();
         },
@@ -785,18 +837,35 @@
     return list;
   }
 
-  // 지갑 설치 페이지와, 스마트폰 지갑 앱의 내장 브라우저에서 이 사이트를 여는 딥링크.
-  // 앱 내장 브라우저에서는 지갑이 위 방식으로 자동 감지된다.
-  const here = () => location.origin + location.pathname;
+  // MetaMask는 사이트가 공식 SDK(@metamask/connect-solana)를 불러와야 솔라나 지갑으로 등록된다.
+  // 용량(약 630KB) 때문에 지갑 창을 처음 열 때만 불러온다(vendor/metamask-solana.js).
+  let mmState = "idle"; // idle | loading | ready | failed
+  async function loadMetaMask() {
+    if (mmState !== "idle") return;
+    mmState = "loading";
+    refreshWalletDialog();
+    try {
+      const mod = await import("./vendor/metamask-solana.js");
+      const client = await mod.createSolanaClient({
+        dapp: { name: t("siteTitle"), url: location.origin },
+        api: { supportedNetworks: { mainnet: "https://api.mainnet-beta.solana.com", devnet: "https://api.devnet.solana.com" } },
+        analytics: { enabled: false },
+      });
+      registry.register(client.getWallet());
+      mmState = "ready";
+    } catch (e) {
+      console.error("MetaMask SDK 불러오기 실패", e);
+      mmState = "failed";
+    }
+    refreshWalletDialog();
+  }
+
+  // 지갑 설치 페이지와, 스마트폰에서 MetaMask 앱의 내장 브라우저로 이 사이트를 여는 딥링크.
   const KNOWN = [
-    { key: "phantom", name: "Phantom", url: "https://phantom.app/download",
-      deeplink: () => `https://phantom.app/ul/browse/${encodeURIComponent(here())}?ref=${encodeURIComponent(location.origin)}` },
-    { key: "solflare", name: "Solflare", url: "https://solflare.com/download",
-      deeplink: () => `https://solflare.com/ul/v1/browse/${encodeURIComponent(here())}?ref=${encodeURIComponent(location.origin)}` },
+    { key: "jupiter", name: "Jupiter", url: "https://docs.jup.ag/user-docs/manage/extension-wallet" },
+    { key: "backpack", name: "Backpack", url: "https://backpack.app/download" },
     { key: "metamask", name: "MetaMask", url: "https://metamask.io/download",
       deeplink: () => `https://link.metamask.io/dapp/${location.host}${location.pathname}` },
-    { key: "backpack", name: "Backpack", url: "https://backpack.app/download" },
-    { key: "jupiter", name: "Jupiter", url: "https://docs.jup.ag/user-docs/manage/extension-wallet" },
   ];
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -831,16 +900,102 @@
     updateEditLock();
   }
 
+  // 연결 실패의 실제 원인을 사용자가 볼 수 있게 한다(거절/취소와 그 밖의 실패를 구분하고, 원본 오류도 함께 보여 준다).
+  const REJECT_RE = /reject|denied|declin|cancel|closed|dismiss|refus|거절|취소/i;
+  const errMessage = (e) => String((e && (e.message || (e.error && e.error.message))) || e || "").slice(0, 200);
+  const errCode = (e) => (e && (e.code !== undefined ? e.code : e.error && e.error.code));
+  function isRejection(e) {
+    return errCode(e) === 4001 || REJECT_RE.test(String(e && e.name) + " " + errMessage(e));
+  }
+  function rawError(e) {
+    const parts = [e && e.name, errCode(e) !== undefined ? `code ${errCode(e)}` : null, errMessage(e)].filter(Boolean);
+    if (e && e.fallbackError) parts.push(`(fallback: ${errMessage(e.fallbackError)})`);
+    return parts.join(" · ");
+  }
+  function describeError(e) {
+    if (e && e.noAccount) return { text: errMessage(e), detail: "" };
+    // 지갑이 "Not Connected"라고만 답하면: 잠겨 있거나 계정이 선택되지 않았거나 다른 지갑 확장과 충돌한 경우가 많다.
+    const hint = /not connected/i.test(errMessage(e) + " " + errMessage(e && e.fallbackError)) ? t("walletHintNotConnected") : "";
+    return { text: isRejection(e) ? t("walletRejected") : t("walletFailed"), detail: rawError(e), hint };
+  }
+
+  function setWalletMsg(text, detail, hint) {
+    const m = $("walletMsg");
+    m.textContent = text || "";
+    if (text && detail) {
+      const s = document.createElement("small");
+      s.className = "wdetail";
+      s.textContent = detail;
+      m.append(s);
+    }
+    if (text && hint) {
+      const h = document.createElement("small");
+      h.className = "wdetail whint";
+      h.textContent = hint;
+      m.append(h);
+    }
+    m.hidden = !text;
+  }
+
+  let lastError = null; // 진단 정보용
+  // 가장 중요한 정보(마지막 오류, 등록된 지갑)를 맨 위에 둔다. 일부만 복사해도 원인이 들어가도록.
+  function diagText() {
+    const bp = window.backpack;
+    const lines = [];
+    lines.push(lastError ? `last error (${lastError.wallet}): ${lastError.raw}` : "last error: (none)");
+    lines.push("registered wallets:");
+    for (const w of standardWallets) {
+      lines.push(`- ${w.name} | chains: ${(w.chains || []).join(",")} | features: ${Object.keys(w.features || {}).join(",")}`);
+    }
+    if (!standardWallets.length) lines.push("- (none)");
+    lines.push(`legacy: window.backpack=${!!bp} (isBackpack=${!!(bp && bp.isBackpack)}, connect=${typeof (bp && bp.connect)}, solana=${typeof (bp && bp.solana)}) window.ethereum.isMetaMask=${!!(window.ethereum && window.ethereum.isMetaMask)}`);
+    lines.push(`metamask sdk: ${mmState}`);
+    lines.push(`site: ${location.origin}`);
+    lines.push(`ua: ${navigator.userAgent}`);
+    return lines.join("\n");
+  }
+  let diagOpen = false;
+
+  let connecting = false; // 연결 요청이 진행 중이면 다른 지갑 버튼을 잠근다
+  const setBusy = (on) => {
+    connecting = on;
+    $("walletChoices").querySelectorAll("button[data-w]").forEach((b) => { b.disabled = on; });
+  };
+
+  // 지갑이 오래 응답하지 않으면(창을 그냥 닫은 경우 등) 다시 시도할 수 있게 풀어 준다.
+  const WALLET_WAIT_MS = 30000;
+  let attempt = 0;
+
   async function connectWith(w) {
+    const mine = ++attempt;
+    setBusy(true);
+    setWalletMsg(t("walletConnecting", w.name));
+    const slow = setTimeout(() => {
+      if (mine !== attempt || wallet) return;
+      setBusy(false);
+      setWalletMsg(`${w.name}: ${t("walletSlow")}`);
+    }, WALLET_WAIT_MS);
     try {
       const addr = await w.connect();
       wallet = { name: w.name, disconnect: w.disconnect, addr };
-      $("walletDialog").close();
+      clearTimeout(slow);
+      setWalletMsg("");
+      setBusy(false);
+      closeWalletDialog();
       $("walletBtn").textContent = t("walletDisconnect");
       updateEditLock();
       await refreshInfo();
-    } catch {
-      alert(t("walletFail"));
+    } catch (e) {
+      clearTimeout(slow);
+      console.error("지갑 연결 실패:", w.name, e);
+      lastError = { wallet: w.name, raw: rawError(e) };
+      if (mine === attempt) {
+        const d = describeError(e);
+        setWalletMsg(`${w.name}: ${d.text}`, d.detail, d.hint);
+        setBusy(false);
+        diagOpen = true; // 실패하면 진단 정보를 바로 펼쳐 복사할 수 있게 한다
+        renderWalletChoices();
+      }
     }
   }
 
@@ -851,6 +1006,29 @@
     el.append(...children);
     li.append(el);
     return li;
+  }
+
+  // 지갑 선택 창은 showModal()이 아니라 show()로 띄운다. 모달이면 창 밖의 모든 요소가 비활성(inert)이 되어
+  // MetaMask SDK가 페이지에 띄우는 안내·QR 창을 누를 수 없고 창 뒤에 가려지기 때문이다.
+  function openWalletDialog() {
+    $("walletBackdrop").hidden = false;
+    $("walletDialog").show();
+    const first = $("walletChoices").querySelector("button:not(:disabled), a");
+    if (first) first.focus();
+  }
+  function closeWalletDialog() {
+    $("walletDialog").close();
+    $("walletBackdrop").hidden = true;
+  }
+
+  function refreshDiag() {
+    const pre = $("walletDiagText");
+    if (pre) pre.textContent = diagText();
+  }
+
+  function refreshWalletDialog() {
+    const d = $("walletDialog");
+    if (d && d.open) renderWalletChoices();
   }
 
   function renderWalletChoices() {
@@ -867,36 +1045,43 @@
     };
 
     const dUl = section("walletDetected");
-    if (!detected.length) {
-      const p = document.createElement("p");
-      p.className = "note";
-      p.textContent = t("walletNoneDetected");
-      dUl.replaceWith(p);
-    }
     for (const w of detected) {
       let icon;
       if (w.icon && /^data:image\//.test(w.icon)) { icon = document.createElement("img"); icon.src = w.icon; icon.alt = ""; }
       else { icon = document.createElement("span"); icon.className = "ph"; }
       const label = document.createElement("span");
       label.textContent = w.name;
-      const row = walletRow("button", [icon, label], { type: "button" });
+      const row = walletRow("button", [icon, label], { type: "button", disabled: connecting });
+      row.firstChild.dataset.w = w.name;
       row.firstChild.onclick = () => connectWith(w);
       dUl.append(row);
     }
+    const hasMM = detected.some((w) => /metamask/i.test(w.name));
+    if (!hasMM && mmState === "loading") {
+      const ph = document.createElement("span");
+      ph.className = "ph";
+      dUl.append(walletRow("button", [ph, document.createTextNode(t("walletMMLoading"))], { type: "button", disabled: true }));
+    }
+    if (!dUl.children.length) {
+      const p = document.createElement("p");
+      p.className = "note";
+      p.textContent = t("walletNoneDetected");
+      dUl.replaceWith(p);
+    }
 
-    const has = (k) => detected.some((w) => w.name.toLowerCase().includes(k));
-    if (isMobile() && !detected.length) {
+    if (isMobile()) {
+      const mm = KNOWN.find((k) => k.key === "metamask");
       const p = document.createElement("p");
       p.className = "note";
       p.textContent = t("walletMobileHint");
       const mUl = section("walletMobile");
       mUl.before(p);
-      for (const k of KNOWN.filter((x) => x.deeplink)) {
-        mUl.append(walletRow("a", [document.createTextNode(t("walletOpenIn", k.name))],
-          { href: k.deeplink(), rel: "noopener" }));
-      }
+      mUl.append(walletRow("a", [document.createTextNode(t("walletOpenIn", mm.name))], { href: mm.deeplink(), rel: "noopener" }));
     }
-    const missing = KNOWN.filter((k) => !has(k.key));
+
+    // 감지되지 않은 지갑의 설치 링크. MetaMask는 SDK가 불러와지지 않았을 때만 보여 준다.
+    const has = (k) => detected.some((w) => w.name.toLowerCase().includes(k));
+    const missing = KNOWN.filter((k) => !has(k.key) && (k.key !== "metamask" || mmState === "failed"));
     if (missing.length) {
       const oUl = section("walletOther");
       for (const k of missing) {
@@ -904,6 +1089,35 @@
           { href: k.url, target: "_blank", rel: "noopener noreferrer" }));
       }
     }
+    if (mmState === "failed") {
+      const p = document.createElement("p");
+      p.className = "note";
+      p.textContent = t("walletMMFail");
+      box.append(p);
+    }
+
+    // 연결이 계속 실패할 때 원인을 알 수 있도록 진단 정보를 보여 준다.
+    const det = document.createElement("details");
+    det.className = "wdiag";
+    det.open = diagOpen;
+    det.addEventListener("toggle", () => { diagOpen = det.open; });
+    const sum = document.createElement("summary");
+    sum.textContent = t("walletDiag");
+    const hint = document.createElement("p");
+    hint.className = "note small";
+    hint.textContent = t("walletDiagHint");
+    const pre = document.createElement("pre");
+    pre.id = "walletDiagText";
+    pre.textContent = diagText();
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "btn small ghost";
+    copy.textContent = t("copy");
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(pre.textContent); copy.textContent = t("copied"); } catch { /* 복사 불가 환경 */ }
+    };
+    det.append(sum, hint, pre, copy);
+    box.append(det);
   }
 
   $("walletBtn").onclick = async () => {
@@ -911,11 +1125,18 @@
       try { await wallet.disconnect(); } catch { /* ignore */ }
       onDisconnect();
     } else {
+      setWalletMsg("");
       renderWalletChoices();
-      $("walletDialog").showModal();
+      openWalletDialog();
+      loadMetaMask();
     }
   };
-  $("closeWallet").onclick = () => $("walletDialog").close();
+  $("closeWallet").onclick = closeWalletDialog;
+  $("walletDialog").addEventListener("close", () => { $("walletBackdrop").hidden = true; });
+  $("walletBackdrop").addEventListener("click", closeWalletDialog);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && $("walletDialog").open) closeWalletDialog();
+  });
   $("network").onchange = refreshInfo;
 
   // ---------- 화면 언어 전환 / 시작 ----------

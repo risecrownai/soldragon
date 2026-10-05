@@ -117,3 +117,21 @@ dialog menu{align-items:center}
 .hero button.home-sun img{height:130px;width:auto;max-width:100%;max-height:none}
 .hero.small button.home-sun img{height:150px}
 @media (max-width:520px){.hero button.home-sun img,.hero.small button.home-sun img{height:90px}}
+
+/* 지갑 연결 메시지 */
+.wmsg{padding:.5rem .7rem;border-radius:8px;background:var(--panel);border:1px solid var(--rose);color:var(--fg)}
+.wlist button:disabled{opacity:.55;cursor:default}
+
+/* 사이드바: 원래대로 페이지와 함께 스크롤된다. 내보내기·가져오기는 경전 목록 바로 아래에 둔다. */
+#sutraList{min-height:0}
+@media (min-width:761px){#sutraList{flex:none;overflow:visible}}
+
+/* 지갑 선택 창: 모달이 아니라 일반 창으로 띄운다(MetaMask 안내창 등 페이지에 뜨는 지갑 UI가 가려지지 않도록) */
+#walletDialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;z-index:1000}
+.wbackdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999}
+.wmsg small.wdetail{display:block;margin-top:.3rem;color:var(--muted);word-break:break-word}
+.wdiag{margin-top:.6rem;font-size:.85rem}
+.wdiag summary{cursor:pointer;color:var(--muted)}
+.wdiag pre{white-space:pre-wrap;word-break:break-all;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.5rem;margin:.4rem 0;font-size:.75rem}
+
+.wmsg .whint{color:var(--fg);font-weight:600}

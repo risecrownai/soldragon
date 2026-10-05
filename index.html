@@ -39,7 +39,6 @@
       <button id="resetOrderBtn" class="btn small ghost" data-i18n="reorderReset" hidden></button>
     </div>
     <div id="reorderBar" class="reorder-bar" hidden>
-      <p class="note small" data-i18n="reorderHint"></p>
       <div class="rb-btns">
         <button id="mvTop" class="btn small ghost" data-i18n="btnTop" disabled></button>
         <button id="mvUp" class="btn small ghost" data-i18n="btnUp" disabled></button>
@@ -165,9 +164,11 @@
   </form>
 </dialog>
 
+<div id="walletBackdrop" class="wbackdrop" hidden></div>
 <dialog id="walletDialog">
   <div class="wdlg">
     <h2 data-i18n="walletTitle"></h2>
+    <p id="walletMsg" class="note wmsg" role="alert" hidden></p>
     <div id="walletChoices"></div>
     <menu>
       <button type="button" id="closeWallet" class="btn" data-i18n="close"></button>
