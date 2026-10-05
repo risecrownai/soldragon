@@ -208,7 +208,7 @@
     for (const key of current.hero || ["dragon", "sun", "lotus"]) {
       const img = document.createElement("img");
       img.src = `images/${key}.svg`;
-      img.alt = t("alt" + key[0].toUpperCase() + key.slice(1));
+      img.alt = t("alt" + key.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(""));
       hero.append(img);
     }
   }

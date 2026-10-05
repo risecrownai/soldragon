@@ -134,7 +134,7 @@ window.DEFAULT_SUTRAS = [
     title_en: "Thousand Hands Sutra (excerpts)",
     lang: "ko-KR",
     origLabel: "한자 · 진언 (한국 독송본)",
-    hero: ["lotus", "avalokiteshvara", "dragon"],
+    hero: ["lotus", "avalokiteshvara", "dragon-pearl"],
     heroTheme: "green",
     paragraphs: [
       { orig: "修利修利 摩訶修利 修修利 娑婆訶",
