@@ -117,3 +117,7 @@ dialog menu{align-items:center}
 .hero button.home-sun img{height:130px;width:auto;max-width:100%;max-height:none}
 .hero.small button.home-sun img{height:150px}
 @media (max-width:520px){.hero button.home-sun img,.hero.small button.home-sun img{height:90px}}
+
+/* 지갑 연결 메시지 */
+.wmsg{padding:.5rem .7rem;border-radius:8px;background:var(--panel);border:1px solid var(--rose);color:var(--fg)}
+.wlist button:disabled{opacity:.55;cursor:default}
