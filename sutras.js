@@ -46,7 +46,7 @@ window.DEFAULT_SUTRAS = [
     title_en: "Diamond Sutra (excerpts)",
     lang: "zh-CN",
     origLabel: "漢文 (鳩摩羅什 譯)",
-    hero: ["buddha", "sun", "lotus"],
+    hero: ["sun", "buddha", "dragon-pearl"],
     heroTheme: "gold",
     paragraphs: [
       { orig: "如是我聞：一時，佛在舍衛國祇樹給孤獨園，與大比丘眾千二百五十人俱。爾時，世尊食時，著衣持缽，入舍衛大城乞食。於其城中次第乞已，還至本處。飯食訖，收衣缽，洗足已，敷座而坐。",
@@ -103,7 +103,7 @@ window.DEFAULT_SUTRAS = [
     title_en: "Ushnisha Vijaya Dharani Sutra",
     lang: "hi-IN",
     origLabel: "Sanskrit (IAST)",
-    hero: ["sun", "vairocana", "lotus"],
+    hero: ["dragon-pearl", "vairocana", "sun"],
     heroTheme: "violet",
     intro_en: "Background: In the Heaven of the Thirty-three, the deva Good Abode (Supratishthita) learned that he had only seven days to live and would then be reborn in lower realms. Terrified, he sought help from Indra, who appealed to the Buddha. The Buddha taught the Ushnisha Vijaya Dharani, which purifies karmic obstructions and lengthens life. (Summary only. The full sutra text is not included here; you can add it with the \"Add sutra\" button.)",
     intro_ko: "배경: 도리천의 선주(善住) 천자는 자신의 수명이 이레밖에 남지 않았고 그 뒤에는 악도에 태어난다는 것을 알고 두려워하여 제석천에게 도움을 청했습니다. 제석천이 부처님께 여쭙자, 부처님께서 죄업의 장애를 깨끗이 하고 수명을 늘려 주는 불정존승다라니를 설하셨습니다. (요약입니다. 경 전문은 포함되어 있지 않으며, ‘경전 추가’로 직접 넣을 수 있습니다.)",

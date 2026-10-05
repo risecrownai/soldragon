@@ -186,6 +186,21 @@
     renderList();
   }
 
+  // 홈 화면: 낭독을 멈추고 경전 선택을 해제한다.
+  function goHome() {
+    stop();
+    current = null;
+    $("reader").hidden = true;
+    $("homeHero").hidden = false;
+    $("empty").hidden = false;
+    $("sidebar").classList.remove("open");
+    renderList();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  document.addEventListener("click", (ev) => {
+    if (ev.target.closest("[data-home]")) goHome();
+  });
+
   function open(id, fromUser) {
     stop();
     current = all().find((s) => s.id === id);
@@ -208,7 +223,19 @@
     for (const key of current.hero || ["dragon", "sun", "lotus"]) {
       const img = document.createElement("img");
       img.src = `images/${key}.svg`;
-      img.alt = t("alt" + key[0].toUpperCase() + key.slice(1));
+      if (key === "sun") {
+        // 상단의 태양 그림을 누르면 홈 화면으로 돌아간다
+        const btn = document.createElement("button");
+        btn.className = "home-sun";
+        btn.dataset.home = "";
+        btn.title = t("goHome");
+        btn.setAttribute("aria-label", t("goHome"));
+        img.alt = "";
+        btn.append(img);
+        hero.append(btn);
+        continue;
+      }
+      img.alt = t("alt" + key.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(""));
       hero.append(img);
     }
   }

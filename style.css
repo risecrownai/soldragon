@@ -109,3 +109,11 @@ dialog{max-height:90vh;overflow:auto}
 .export-list{list-style:none;margin:0;padding:0;max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:.3rem}
 dialog label.check{flex-direction:row;align-items:center;gap:.5rem}
 dialog menu{align-items:center}
+
+/* 상단 태양 그림 = 홈 버튼 */
+.logo-btn{background:none;border:0;padding:0;cursor:pointer;line-height:0;border-radius:50%}
+.logo-btn:focus-visible,.home-sun:focus-visible{outline:3px solid var(--rose);outline-offset:3px;border-radius:12px}
+.hero button.home-sun{background:none;border:0;padding:0;cursor:pointer;line-height:0;max-width:32%;display:flex}
+.hero button.home-sun img{height:130px;width:auto;max-width:100%;max-height:none}
+.hero.small button.home-sun img{height:150px}
+@media (max-width:520px){.hero button.home-sun img,.hero.small button.home-sun img{height:90px}}
