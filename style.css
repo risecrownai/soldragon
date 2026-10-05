@@ -62,9 +62,6 @@ dialog menu{display:flex;justify-content:flex-end;gap:.5rem;padding:0;margin:0}
 /* 순서 변경 */
 .side-tools{display:flex;gap:.4rem}
 #sutraList li.reordering button.item{cursor:default}
-#sutraList .mv{background:none;border:0;color:inherit;cursor:pointer;padding:0 .35rem;font:inherit}
-#sutraList .mv:disabled{opacity:.3;cursor:default}
-#sutraList .mv:focus-visible,#sutraList .del:focus-visible{outline:3px solid var(--rose);outline-offset:1px;border-radius:4px}
 #repeatInfo{min-width:3.5rem;color:var(--muted)}
 .btn:disabled{opacity:.45;cursor:default}
 
@@ -93,3 +90,22 @@ dialog{max-height:90vh;overflow:auto}
 
 /* display를 지정한 요소(.controls label 등)도 hidden 속성이 항상 우선하게 한다 */
 [hidden]{display:none !important}
+
+/* 경전 수정·삭제, 지갑 연결 전 잠금 */
+#sutraList button.edit{background:none;border:0;color:inherit;cursor:pointer;padding:0 .35rem;font:inherit}
+#sutraList .edit:focus-visible,#sutraList .del:focus-visible{outline:3px solid var(--rose);outline-offset:1px;border-radius:4px}
+#sutraList .edit:disabled,#sutraList .del:disabled{opacity:.35;cursor:not-allowed}
+.btn.disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
+.note.small{font-size:.8rem;margin:0;line-height:1.4}
+
+/* 순서 변경: 경전을 고른 뒤 버튼으로 이동 */
+.reorder-bar{display:flex;flex-direction:column;gap:.4rem;padding:.5rem;border:1px dashed var(--gold);border-radius:10px}
+.rb-btns{display:flex;flex-wrap:wrap;gap:.3rem}
+#sutraList li.reordering button.item{cursor:pointer}
+#sutraList li.selected{outline:3px solid var(--rose);outline-offset:-1px;background:var(--line)}
+#sutraList li.selected.active{background:var(--gold)}
+
+/* 내보내기 선택 */
+.export-list{list-style:none;margin:0;padding:0;max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:.3rem}
+dialog label.check{flex-direction:row;align-items:center;gap:.5rem}
+dialog menu{align-items:center}

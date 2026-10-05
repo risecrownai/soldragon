@@ -33,14 +33,24 @@
       <h2 data-i18n="sutraList"></h2>
       <button id="addBtn" class="btn small" data-i18n="addSutra"></button>
     </div>
+    <p id="editHint" class="note small" data-i18n="editLocked"></p>
     <div class="side-tools">
       <button id="reorderBtn" class="btn small ghost" data-i18n="reorder"></button>
       <button id="resetOrderBtn" class="btn small ghost" data-i18n="reorderReset" hidden></button>
     </div>
+    <div id="reorderBar" class="reorder-bar" hidden>
+      <p class="note small" data-i18n="reorderHint"></p>
+      <div class="rb-btns">
+        <button id="mvTop" class="btn small ghost" data-i18n="btnTop" disabled></button>
+        <button id="mvUp" class="btn small ghost" data-i18n="btnUp" disabled></button>
+        <button id="mvDown" class="btn small ghost" data-i18n="btnDown" disabled></button>
+        <button id="mvBottom" class="btn small ghost" data-i18n="btnBottom" disabled></button>
+      </div>
+    </div>
     <ul id="sutraList"></ul>
     <div class="side-foot">
       <button id="exportBtn" class="btn small ghost" data-i18n="export"></button>
-      <label class="btn small ghost"><span data-i18n="import"></span><input id="importFile" type="file" accept="application/json" hidden></label>
+      <label id="importLabel" class="btn small ghost"><span data-i18n="import"></span><input id="importFile" type="file" accept="application/json" hidden></label>
     </div>
     <div class="deco">
       <img src="images/lotus.svg" data-i18n-alt="altLotus" alt="">
@@ -113,7 +123,7 @@
 
 <dialog id="addDialog">
   <form method="dialog" id="addForm">
-    <h2 data-i18n="addTitle"></h2>
+    <h2 id="addDialogTitle" data-i18n="addTitle"></h2>
     <label><span data-i18n="fTitle"></span> <input name="title" required maxlength="100"></label>
     <label><span data-i18n="fLang"></span>
       <select name="lang">
@@ -136,7 +146,21 @@
     </label>
     <menu>
       <button type="button" id="cancelAdd" class="btn" data-i18n="cancel"></button>
-      <button type="submit" class="btn primary" data-i18n="add"></button>
+      <button type="submit" id="addSubmit" class="btn primary" data-i18n="add"></button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="exportDialog">
+  <form method="dialog" id="exportForm">
+    <h2 data-i18n="exportTitle"></h2>
+    <label id="exportAllLabel" class="check"><input type="checkbox" id="exportAll"> <span data-i18n="exportAll"></span></label>
+    <ul id="exportList" class="export-list"></ul>
+    <p id="exportEmpty" class="note" data-i18n="exportNone" hidden></p>
+    <menu>
+      <span id="exportCount" class="note"></span>
+      <button type="button" id="cancelExport" class="btn" data-i18n="cancel"></button>
+      <button type="submit" id="exportGo" class="btn primary" data-i18n="exportGo"></button>
     </menu>
   </form>
 </dialog>

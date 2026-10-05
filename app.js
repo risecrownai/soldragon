@@ -63,15 +63,35 @@
       .map(([s]) => s);
   };
 
-  function move(id, dir) {
+  let selectedId = null; // 순서 변경 모드에서 고른 경전
+
+  // 경전 추가·수정·삭제·가져오기는 암호화폐 지갑이 연결된 때만 허용한다.
+  const canEdit = () => !!wallet;
+
+  const indexOfId = (id) => all().findIndex((s) => s.id === id);
+
+  function moveTo(id, newIdx, refocus) {
     const ids = all().map((s) => s.id);
     const i = ids.indexOf(id);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= ids.length) return;
-    [ids[i], ids[j]] = [ids[j], ids[i]];
+    const j = Math.max(0, Math.min(ids.length - 1, newIdx));
+    if (i < 0 || i === j) return;
+    ids.splice(j, 0, ids.splice(i, 1)[0]);
     order = ids;
     lsSet(ORDER_KEY, JSON.stringify(order));
     renderList();
+    const el = document.querySelector("#sutraList li.selected");
+    if (el) {
+      el.scrollIntoView({ block: "nearest" });
+      if (refocus) el.querySelector("button.item").focus();
+    }
+  }
+
+  function renderReorderBar() {
+    const last = all().length - 1;
+    const i = selectedId ? indexOfId(selectedId) : -1;
+    $("reorderBar").hidden = !reorderMode;
+    $("mvTop").disabled = $("mvUp").disabled = i <= 0;
+    $("mvDown").disabled = $("mvBottom").disabled = i < 0 || i >= last;
   }
 
   function renderList() {
@@ -85,48 +105,61 @@
       const b = document.createElement("button");
       b.className = "item";
       b.textContent = titleOf(s);
+      if (reorderMode) {
+        const picked = selectedId === s.id;
+        if (picked) li.classList.add("selected");
+        b.setAttribute("aria-pressed", String(picked));
+      }
       b.onclick = () => {
-        if (reorderMode) return;
+        if (reorderMode) {
+          // 순서 변경 모드: 경전을 고른다(다시 누르면 선택 해제)
+          selectedId = selectedId === s.id ? null : s.id;
+          renderList();
+          const el = document.querySelector("#sutraList li.selected button.item");
+          if (el) el.focus();
+          return;
+        }
         open(s.id, true);
         $("sidebar").classList.remove("open");
       };
+      b.onkeydown = (ev) => {
+        if (!reorderMode || selectedId !== s.id) return;
+        if (ev.key === "ArrowUp") { ev.preventDefault(); moveTo(s.id, idx - 1, true); }
+        else if (ev.key === "ArrowDown") { ev.preventDefault(); moveTo(s.id, idx + 1, true); }
+      };
       li.append(b);
-      if (reorderMode) {
-        const up = document.createElement("button");
-        up.className = "mv";
-        up.textContent = "▲";
-        up.disabled = idx === 0;
-        up.setAttribute("aria-label", t("moveUp", titleOf(s)));
-        up.onclick = () => move(s.id, -1);
-        const down = document.createElement("button");
-        down.className = "mv";
-        down.textContent = "▼";
-        down.disabled = idx === list.length - 1;
-        down.setAttribute("aria-label", t("moveDown", titleOf(s)));
-        down.onclick = () => move(s.id, 1);
-        li.append(up, down);
-      }
-      if (s.custom) {
+      if (s.custom && !reorderMode) {
+        const ed = document.createElement("button");
+        ed.className = "edit";
+        ed.textContent = "✎";
+        ed.title = canEdit() ? t("edit") : t("editLocked");
+        ed.setAttribute("aria-label", `${t("edit")}: ${titleOf(s)}`);
+        ed.disabled = !canEdit();
+        ed.onclick = () => openEditor(s.id);
         const d = document.createElement("button");
         d.className = "del";
         d.textContent = "✕";
-        d.title = t("del");
+        d.title = canEdit() ? t("del") : t("editLocked");
         d.setAttribute("aria-label", `${t("del")}: ${titleOf(s)}`);
+        d.disabled = !canEdit();
         d.onclick = () => {
+          if (!canEdit()) return;
           if (!confirm(t("delConfirm", titleOf(s)))) return;
           custom = custom.filter((c) => c.id !== s.id);
           saveCustom(custom);
           if (current && current.id === s.id) { stop(); current = null; $("reader").hidden = true; $("homeHero").hidden = false; $("empty").hidden = false; }
           renderList();
         };
-        li.append(d);
+        li.append(ed, d);
       }
       ul.append(li);
     });
+    renderReorderBar();
   }
 
   $("reorderBtn").onclick = () => {
     reorderMode = !reorderMode;
+    selectedId = null;
     $("reorderBtn").textContent = t(reorderMode ? "reorderDone" : "reorder");
     $("resetOrderBtn").hidden = !reorderMode;
     renderList();
@@ -136,6 +169,22 @@
     lsSet(ORDER_KEY, "[]");
     renderList();
   };
+  $("mvTop").onclick = () => moveTo(selectedId, 0);
+  $("mvUp").onclick = () => moveTo(selectedId, indexOfId(selectedId) - 1);
+  $("mvDown").onclick = () => moveTo(selectedId, indexOfId(selectedId) + 1);
+  $("mvBottom").onclick = () => moveTo(selectedId, all().length - 1);
+
+  // 지갑 연결 여부에 따라 추가·가져오기 버튼과 수정·삭제 버튼을 잠그거나 푼다.
+  function updateEditLock() {
+    const ok = canEdit();
+    $("addBtn").disabled = !ok;
+    $("importFile").disabled = !ok;
+    $("importLabel").classList.toggle("disabled", !ok);
+    $("addBtn").title = $("importLabel").title = ok ? "" : t("editLocked");
+    $("editHint").hidden = ok;
+    if (!ok && $("addDialog").open) $("addDialog").close();
+    renderList();
+  }
 
   function open(id, fromUser) {
     stop();
@@ -495,44 +544,129 @@
   $("stopBtn").onclick = stop;
   window.addEventListener("pagehide", stop);
 
-  // ---------- 경전 추가 / 내보내기 / 가져오기 ----------
+  // ---------- 경전 추가·수정 / 내보내기 / 가져오기 ----------
   const dlg = $("addDialog");
-  $("addBtn").onclick = () => { $("addForm").reset(); dlg.showModal(); };
-  $("cancelAdd").onclick = () => dlg.close();
+  let editingId = null; // null이면 새 경전 추가, 아니면 수정 중인 경전 id
+  const BLANK = "-"; // 번역이 없는 문단을 표시하는 한 줄(수정 창에서 문단 위치를 유지하기 위해)
   const paras = (s) => s.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+  const clean = (v) => (v === BLANK ? "" : v);
+  // 뒤쪽의 빈 문단은 버리고, 중간에 낀 빈 문단은 BLANK로 채워 위치가 어긋나지 않게 한다.
+  const joinParas = (arr) => {
+    let last = arr.length - 1;
+    while (last >= 0 && !arr[last]) last--;
+    return arr.slice(0, last + 1).map((x) => x || BLANK).join("\n\n");
+  };
+
+  function openEditor(id) {
+    if (!canEdit()) return;
+    const sutra = id ? custom.find((c) => c.id === id) : null;
+    editingId = sutra ? sutra.id : null;
+    $("addForm").reset();
+    const f = $("addForm").elements;
+    if (sutra) {
+      f.title.value = sutra.title;
+      if (![...f.lang.options].some((o) => o.value === sutra.lang)) f.lang.append(new Option(sutra.lang, sutra.lang));
+      f.lang.value = sutra.lang;
+      f.orig.value = joinParas(sutra.paragraphs.map((p) => p.orig));
+      f.en.value = joinParas(sutra.paragraphs.map((p) => p.en));
+      f.ko.value = joinParas(sutra.paragraphs.map((p) => p.ko));
+    }
+    const titleKey = editingId ? "editTitle" : "addTitle";
+    const submitKey = editingId ? "save" : "add";
+    $("addDialogTitle").dataset.i18n = titleKey;
+    $("addDialogTitle").textContent = t(titleKey);
+    $("addSubmit").dataset.i18n = submitKey;
+    $("addSubmit").textContent = t(submitKey);
+    dlg.showModal();
+  }
+  $("addBtn").onclick = () => openEditor(null);
+  $("cancelAdd").onclick = () => dlg.close();
+  dlg.addEventListener("close", () => { editingId = null; });
 
   $("addForm").addEventListener("submit", () => {
+    if (!canEdit()) return;
     const f = new FormData($("addForm"));
-    const o = paras(f.get("orig"));
-    const e = paras(f.get("en"));
-    const k = paras(f.get("ko"));
+    const o = paras(f.get("orig")).map(clean);
+    const e = paras(f.get("en")).map(clean);
+    const k = paras(f.get("ko")).map(clean);
     if (!o.length) return;
-    const sutra = {
-      id: "c" + Date.now().toString(36),
-      custom: true,
+    const data = {
       title: f.get("title").trim(),
       lang: f.get("lang"),
       paragraphs: o.map((orig, i) => ({ orig, en: e[i] || "", ko: k[i] || "" })),
     };
+    if (editingId) {
+      const sutra = custom.find((c) => c.id === editingId);
+      if (!sutra) return;
+      Object.assign(sutra, data);
+      saveCustom(custom);
+      const wasOpen = current && current.id === sutra.id;
+      renderList();
+      if (wasOpen) open(sutra.id, false); // 수정한 내용으로 다시 그린다(낭독은 멈춘다)
+      return;
+    }
+    const sutra = { id: "c" + Date.now().toString(36), custom: true, ...data };
     custom.push(sutra);
     saveCustom(custom);
     renderList();
     open(sutra.id, false);
   });
 
+  // 내보내기: 고른 경전만 JSON 파일로 저장한다(직접 추가한 경전만 대상).
+  const exportBoxes = () => [...$("exportList").querySelectorAll("input")];
+  function syncExport() {
+    const boxes = exportBoxes();
+    const n = boxes.filter((x) => x.checked).length;
+    $("exportAll").checked = boxes.length > 0 && n === boxes.length;
+    $("exportAll").indeterminate = n > 0 && n < boxes.length;
+    $("exportGo").disabled = n === 0;
+    $("exportCount").textContent = boxes.length ? t("exportCount", n) : "";
+  }
   $("exportBtn").onclick = () => {
-    const blob = new Blob([JSON.stringify(custom, null, 2)], { type: "application/json" });
+    const ul = $("exportList");
+    ul.textContent = "";
+    for (const s of custom) {
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      label.className = "check";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.value = s.id;
+      box.checked = true;
+      box.onchange = syncExport;
+      const name = document.createElement("span");
+      name.textContent = titleOf(s);
+      label.append(box, name);
+      li.append(label);
+      ul.append(li);
+    }
+    const none = custom.length === 0;
+    $("exportEmpty").hidden = !none;
+    $("exportAllLabel").hidden = none;
+    syncExport();
+    $("exportDialog").showModal();
+  };
+  $("exportAll").onchange = () => {
+    for (const b of exportBoxes()) b.checked = $("exportAll").checked;
+    syncExport();
+  };
+  $("cancelExport").onclick = () => $("exportDialog").close();
+  $("exportForm").addEventListener("submit", () => {
+    const ids = new Set(exportBoxes().filter((x) => x.checked).map((x) => x.value));
+    const picked = custom.filter((s) => ids.has(s.id));
+    if (!picked.length) return;
+    const blob = new Blob([JSON.stringify(picked, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "my-sutras.json";
     a.click();
     URL.revokeObjectURL(a.href);
-  };
+  });
 
   $("importFile").onchange = async (ev) => {
     const file = ev.target.files[0];
     ev.target.value = "";
-    if (!file) return;
+    if (!file || !canEdit()) return;
     try {
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data)) throw new Error();
@@ -667,6 +801,7 @@
     wallet = null;
     $("walletInfo").hidden = true;
     $("walletBtn").textContent = t("walletConnect");
+    updateEditLock();
   }
 
   async function connectWith(w) {
@@ -675,6 +810,7 @@
       wallet = { name: w.name, disconnect: w.disconnect, addr };
       $("walletDialog").close();
       $("walletBtn").textContent = t("walletDisconnect");
+      updateEditLock();
       await refreshInfo();
     } catch {
       alert(t("walletFail"));
@@ -760,7 +896,7 @@
     uiLang = $("uiLang").value;
     lsSet(UI_KEY, uiLang);
     applyUiText();
-    renderList();
+    updateEditLock();
     renderParas();
     populateVoiceNames();
     showNote(noteKey);
@@ -768,5 +904,5 @@
   };
 
   applyUiText();
-  renderList();
+  updateEditLock();
 })();
