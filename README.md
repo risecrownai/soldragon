@@ -19,6 +19,13 @@
 2. Build command 비움, Publish directory `.` (netlify.toml에 이미 설정됨)
 3. 배포 완료
 
+## Vercel 배포 (선택)
+1. https://vercel.com 에서 GitHub로 가입한 뒤 *Add New → Project* 에서 이 저장소를 Import
+2. Framework Preset은 **Other**, Build Command와 Install Command는 비워 둠 (출력 폴더와 보안 헤더는 `vercel.json`에 이미 설정됨)
+3. *Deploy* → `main`에 머지할 때마다 자동 배포되고 PR마다 미리보기 주소가 생깁니다.
+- 무료 Hobby 플랜은 개인·비상업적 용도로 제한될 수 있으니 약관을 확인하세요.
+- 직접 추가한 경전은 접속 주소마다 따로 저장됩니다(Netlify와 Vercel 주소가 다르면 서로 보이지 않음).
+
 ## 참고
 - 팔리어는 대부분의 기기에 전용 음성이 없어 힌디어(hi-IN) 음성으로 대체 낭독합니다. 한문은 zh-CN 음성이 필요합니다.
 - 페이지를 처음 열 때는 브라우저 정책상 소리가 자동 재생되지 않고, 경전을 한 번 클릭하면 재생됩니다.
