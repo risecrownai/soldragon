@@ -747,8 +747,11 @@
     (w.chains || []).some((c) => String(c).startsWith("solana:")) && w.features && w.features["standard:connect"];
 
   // 표준을 아직 따르지 않는 구형 주입 provider (Backpack)
-  const legacyProviderFor = (name) =>
-    /backpack/i.test(name) && window.backpack && window.backpack.isBackpack ? window.backpack : null;
+  const legacyProvidersFor = (name) => {
+    if (!/backpack/i.test(name) || !window.backpack) return [];
+    // Backpack은 버전에 따라 window.backpack 또는 window.backpack.solana에 연결 함수가 있다.
+    return [window.backpack, window.backpack.solana].filter((p) => p && typeof p.connect === "function");
+  };
   const legacy = () => [
     ["Backpack", window.backpack && window.backpack.isBackpack ? window.backpack : null],
   ].filter(([, p]) => p);
@@ -757,7 +760,7 @@
     const list = [];
     for (const w of standardWallets.filter(isSolana)) {
       if (!ALLOWED.test(w.name) || list.some((x) => x.name.toLowerCase() === w.name.toLowerCase())) continue;
-      const lp = legacyProviderFor(w.name);
+      const lps = legacyProvidersFor(w.name);
       const viaStandard = async () => {
         const r = await w.features["standard:connect"].connect();
         const acct = (r && r.accounts && r.accounts[0]) || (w.accounts && w.accounts[0]);
@@ -774,21 +777,26 @@
             return await viaStandard();
           } catch (e) {
             // 사용자가 거절한 경우가 아니면, 같은 지갑의 구형 주입 provider로 한 번 더 시도한다.
-            if (!lp || isRejection(e)) throw e;
-            try {
-              const r = await lp.connect();
-              const pk = (r && r.publicKey) || lp.publicKey;
-              if (!pk) throw new Error("no publicKey");
-              return pk.toString();
-            } catch (e2) {
-              e.fallbackError = e2;
-              throw e;
+            if (!lps.length || isRejection(e)) throw e;
+            for (const lp of lps) {
+              try {
+                const r = await lp.connect();
+                const pk = (r && r.publicKey) || lp.publicKey;
+                if (!pk) throw new Error("no publicKey");
+                return pk.toString();
+              } catch (e2) {
+                if (isRejection(e2)) throw e2; // 사용자가 거절한 것이므로 다른 방식을 더 시도하지 않는다
+                e.fallbackError = e2;
+              }
             }
+            throw e;
           }
         },
         async disconnect() {
           const d = w.features["standard:disconnect"];
-          try { if (d) await d.disconnect(); } finally { if (lp && lp.disconnect) { try { await lp.disconnect(); } catch { /* ignore */ } } }
+          try { if (d) await d.disconnect(); } finally {
+            for (const lp of lps) if (lp.disconnect) { try { await lp.disconnect(); } catch { /* ignore */ } }
+          }
         },
       });
     }
@@ -913,7 +921,8 @@
       lines.push(`- ${w.name} | chains: ${(w.chains || []).join(",")} | features: ${Object.keys(w.features || {}).join(",")}`);
     }
     if (!standardWallets.length) lines.push("- (none)");
-    lines.push(`legacy: window.backpack=${!!(window.backpack && window.backpack.isBackpack)} window.ethereum.isMetaMask=${!!(window.ethereum && window.ethereum.isMetaMask)}`);
+    const bp = window.backpack;
+    lines.push(`legacy: window.backpack=${!!bp} (isBackpack=${!!(bp && bp.isBackpack)}, connect=${typeof (bp && bp.connect)}, solana=${typeof (bp && bp.solana)}) window.ethereum.isMetaMask=${!!(window.ethereum && window.ethereum.isMetaMask)}`);
     if (lastError) lines.push(`last error (${lastError.wallet}): ${lastError.raw}`);
     return lines.join("\n");
   }
@@ -956,7 +965,8 @@
         const d = describeError(e);
         setWalletMsg(`${w.name}: ${d.text}`, d.detail);
         setBusy(false);
-        refreshDiag();
+        diagOpen = true; // 실패하면 진단 정보를 바로 펼쳐 복사할 수 있게 한다
+        renderWalletChoices();
       }
     }
   }
@@ -1113,11 +1123,6 @@
     if ($("walletDialog").open) renderWalletChoices();
   };
 
-  const setTopbarH = () => document.documentElement.style.setProperty("--topbar-h", document.querySelector(".topbar").offsetHeight + "px");
-  setTopbarH();
-  window.addEventListener("resize", setTopbarH);
-
   applyUiText();
   updateEditLock();
-  setTopbarH();
 })();
