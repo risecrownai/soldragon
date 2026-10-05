@@ -747,6 +747,8 @@
     (w.chains || []).some((c) => String(c).startsWith("solana:")) && w.features && w.features["standard:connect"];
 
   // 표준을 아직 따르지 않는 구형 주입 provider (Backpack)
+  const legacyProviderFor = (name) =>
+    /backpack/i.test(name) && window.backpack && window.backpack.isBackpack ? window.backpack : null;
   const legacy = () => [
     ["Backpack", window.backpack && window.backpack.isBackpack ? window.backpack : null],
   ].filter(([, p]) => p);
@@ -755,20 +757,38 @@
     const list = [];
     for (const w of standardWallets.filter(isSolana)) {
       if (!ALLOWED.test(w.name) || list.some((x) => x.name.toLowerCase() === w.name.toLowerCase())) continue;
+      const lp = legacyProviderFor(w.name);
+      const viaStandard = async () => {
+        const r = await w.features["standard:connect"].connect();
+        const acct = (r && r.accounts && r.accounts[0]) || (w.accounts && w.accounts[0]);
+        if (!acct) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
+        const ev = w.features["standard:events"];
+        if (ev) ev.on("change", ({ accounts }) => { if (accounts && !accounts.length) onDisconnect(); });
+        return acct.address;
+      };
       list.push({
         name: w.name,
         icon: w.icon,
         async connect() {
-          const r = await w.features["standard:connect"].connect();
-          const acct = (r && r.accounts && r.accounts[0]) || (w.accounts && w.accounts[0]);
-          if (!acct) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
-          const ev = w.features["standard:events"];
-          if (ev) ev.on("change", ({ accounts }) => { if (accounts && !accounts.length) onDisconnect(); });
-          return acct.address;
+          try {
+            return await viaStandard();
+          } catch (e) {
+            // 사용자가 거절한 경우가 아니면, 같은 지갑의 구형 주입 provider로 한 번 더 시도한다.
+            if (!lp || isRejection(e)) throw e;
+            try {
+              const r = await lp.connect();
+              const pk = (r && r.publicKey) || lp.publicKey;
+              if (!pk) throw new Error("no publicKey");
+              return pk.toString();
+            } catch (e2) {
+              e.fallbackError = e2;
+              throw e;
+            }
+          }
         },
         async disconnect() {
           const d = w.features["standard:disconnect"];
-          if (d) await d.disconnect();
+          try { if (d) await d.disconnect(); } finally { if (lp && lp.disconnect) { try { await lp.disconnect(); } catch { /* ignore */ } } }
         },
       });
     }
@@ -852,21 +872,52 @@
     updateEditLock();
   }
 
-  // 연결 실패의 실제 원인을 사용자가 볼 수 있게 한다(거절/취소와 그 밖의 실패를 구분).
+  // 연결 실패의 실제 원인을 사용자가 볼 수 있게 한다(거절/취소와 그 밖의 실패를 구분하고, 원본 오류도 함께 보여 준다).
   const REJECT_RE = /reject|denied|declin|cancel|closed|dismiss|refus|거절|취소/i;
+  const errMessage = (e) => String((e && (e.message || (e.error && e.error.message))) || e || "").slice(0, 200);
+  const errCode = (e) => (e && (e.code !== undefined ? e.code : e.error && e.error.code));
+  function isRejection(e) {
+    return errCode(e) === 4001 || REJECT_RE.test(String(e && e.name) + " " + errMessage(e));
+  }
+  function rawError(e) {
+    const parts = [e && e.name, errCode(e) !== undefined ? `code ${errCode(e)}` : null, errMessage(e)].filter(Boolean);
+    if (e && e.fallbackError) parts.push(`(fallback: ${errMessage(e.fallbackError)})`);
+    return parts.join(" · ");
+  }
   function describeError(e) {
-    const msg = String((e && (e.message || e.error && e.error.message)) || e || "").slice(0, 200);
-    const code = e && (e.code !== undefined ? e.code : e.error && e.error.code);
-    if (e && e.noAccount) return msg;
-    if (code === 4001 || REJECT_RE.test(String(e && e.name) + " " + msg)) return t("walletRejected");
-    return t("walletFailed", msg || String(code || "unknown"));
+    if (e && e.noAccount) return { text: errMessage(e), detail: "" };
+    return { text: isRejection(e) ? t("walletRejected") : t("walletFailed"), detail: rawError(e) };
   }
 
-  function setWalletMsg(text) {
+  function setWalletMsg(text, detail) {
     const m = $("walletMsg");
     m.textContent = text || "";
+    if (text && detail) {
+      const s = document.createElement("small");
+      s.className = "wdetail";
+      s.textContent = detail;
+      m.append(s);
+    }
     m.hidden = !text;
   }
+
+  let lastError = null; // 진단 정보용
+  function diagText() {
+    const lines = [
+      `site: ${location.origin}`,
+      `ua: ${navigator.userAgent}`,
+      `metamask sdk: ${mmState}`,
+      "registered wallets:",
+    ];
+    for (const w of standardWallets) {
+      lines.push(`- ${w.name} | chains: ${(w.chains || []).join(",")} | features: ${Object.keys(w.features || {}).join(",")}`);
+    }
+    if (!standardWallets.length) lines.push("- (none)");
+    lines.push(`legacy: window.backpack=${!!(window.backpack && window.backpack.isBackpack)} window.ethereum.isMetaMask=${!!(window.ethereum && window.ethereum.isMetaMask)}`);
+    if (lastError) lines.push(`last error (${lastError.wallet}): ${lastError.raw}`);
+    return lines.join("\n");
+  }
+  let diagOpen = false;
 
   let connecting = false; // 연결 요청이 진행 중이면 다른 지갑 버튼을 잠근다
   const setBusy = (on) => {
@@ -893,16 +944,19 @@
       clearTimeout(slow);
       setWalletMsg("");
       setBusy(false);
-      $("walletDialog").close();
+      closeWalletDialog();
       $("walletBtn").textContent = t("walletDisconnect");
       updateEditLock();
       await refreshInfo();
     } catch (e) {
       clearTimeout(slow);
       console.error("지갑 연결 실패:", w.name, e);
+      lastError = { wallet: w.name, raw: rawError(e) };
       if (mine === attempt) {
-        setWalletMsg(`${w.name}: ${describeError(e)}`);
+        const d = describeError(e);
+        setWalletMsg(`${w.name}: ${d.text}`, d.detail);
         setBusy(false);
+        refreshDiag();
       }
     }
   }
@@ -914,6 +968,24 @@
     el.append(...children);
     li.append(el);
     return li;
+  }
+
+  // 지갑 선택 창은 showModal()이 아니라 show()로 띄운다. 모달이면 창 밖의 모든 요소가 비활성(inert)이 되어
+  // MetaMask SDK가 페이지에 띄우는 안내·QR 창을 누를 수 없고 창 뒤에 가려지기 때문이다.
+  function openWalletDialog() {
+    $("walletBackdrop").hidden = false;
+    $("walletDialog").show();
+    const first = $("walletChoices").querySelector("button:not(:disabled), a");
+    if (first) first.focus();
+  }
+  function closeWalletDialog() {
+    $("walletDialog").close();
+    $("walletBackdrop").hidden = true;
+  }
+
+  function refreshDiag() {
+    const pre = $("walletDiagText");
+    if (pre) pre.textContent = diagText();
   }
 
   function refreshWalletDialog() {
@@ -985,6 +1057,29 @@
       p.textContent = t("walletMMFail");
       box.append(p);
     }
+
+    // 연결이 계속 실패할 때 원인을 알 수 있도록 진단 정보를 보여 준다.
+    const det = document.createElement("details");
+    det.className = "wdiag";
+    det.open = diagOpen;
+    det.addEventListener("toggle", () => { diagOpen = det.open; });
+    const sum = document.createElement("summary");
+    sum.textContent = t("walletDiag");
+    const hint = document.createElement("p");
+    hint.className = "note small";
+    hint.textContent = t("walletDiagHint");
+    const pre = document.createElement("pre");
+    pre.id = "walletDiagText";
+    pre.textContent = diagText();
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "btn small ghost";
+    copy.textContent = t("copy");
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(pre.textContent); copy.textContent = t("copied"); } catch { /* 복사 불가 환경 */ }
+    };
+    det.append(sum, hint, pre, copy);
+    box.append(det);
   }
 
   $("walletBtn").onclick = async () => {
@@ -994,11 +1089,16 @@
     } else {
       setWalletMsg("");
       renderWalletChoices();
-      $("walletDialog").showModal();
+      openWalletDialog();
       loadMetaMask();
     }
   };
-  $("closeWallet").onclick = () => $("walletDialog").close();
+  $("closeWallet").onclick = closeWalletDialog;
+  $("walletDialog").addEventListener("close", () => { $("walletBackdrop").hidden = true; });
+  $("walletBackdrop").addEventListener("click", closeWalletDialog);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && $("walletDialog").open) closeWalletDialog();
+  });
   $("network").onchange = refreshInfo;
 
   // ---------- 화면 언어 전환 / 시작 ----------
@@ -1013,6 +1113,11 @@
     if ($("walletDialog").open) renderWalletChoices();
   };
 
+  const setTopbarH = () => document.documentElement.style.setProperty("--topbar-h", document.querySelector(".topbar").offsetHeight + "px");
+  setTopbarH();
+  window.addEventListener("resize", setTopbarH);
+
   applyUiText();
   updateEditLock();
+  setTopbarH();
 })();
