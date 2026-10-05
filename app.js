@@ -756,47 +756,67 @@
     ["Backpack", window.backpack && window.backpack.isBackpack ? window.backpack : null],
   ].filter(([, p]) => p);
 
+  // 같은 이름의 솔라나 지갑이 여러 개 등록될 수 있다(예: MetaMask 확장 프로그램이 직접 등록한 것 + 이 사이트가 SDK로 등록한 것).
+  // 이름별로 묶어 두고, 하나가 실패하면(거절이 아니라면) 다음 것으로 이어서 시도한다.
   function detectedWallets() {
-    const list = [];
+    const groups = new Map();
     for (const w of standardWallets.filter(isSolana)) {
-      if (!ALLOWED.test(w.name) || list.some((x) => x.name.toLowerCase() === w.name.toLowerCase())) continue;
-      const lps = legacyProvidersFor(w.name);
-      const viaStandard = async () => {
-        const r = await w.features["standard:connect"].connect();
-        const acct = (r && r.accounts && r.accounts[0]) || (w.accounts && w.accounts[0]);
-        if (!acct) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
-        const ev = w.features["standard:events"];
-        if (ev) ev.on("change", ({ accounts }) => { if (accounts && !accounts.length) onDisconnect(); });
-        return acct.address;
-      };
+      if (!ALLOWED.test(w.name)) continue;
+      const key = w.name.toLowerCase();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(w);
+    }
+
+    const viaStandard = async (w) => {
+      const r = await w.features["standard:connect"].connect();
+      const acct = (r && r.accounts && r.accounts[0]) || (w.accounts && w.accounts[0]);
+      if (!acct) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
+      const ev = w.features["standard:events"];
+      if (ev) ev.on("change", ({ accounts }) => { if (accounts && !accounts.length) onDisconnect(); });
+      return acct.address;
+    };
+
+    const list = [];
+    for (const ws of groups.values()) {
+      const lps = legacyProvidersFor(ws[0].name);
+      let connectedWith = null; // 연결에 성공한 방식(해제할 때 사용)
       list.push({
-        name: w.name,
-        icon: w.icon,
+        name: ws[0].name,
+        icon: ws[0].icon,
         async connect() {
-          try {
-            return await viaStandard();
-          } catch (e) {
-            // 사용자가 거절한 경우가 아니면, 같은 지갑의 구형 주입 provider로 한 번 더 시도한다.
-            if (!lps.length || isRejection(e)) throw e;
-            for (const lp of lps) {
-              try {
-                const r = await lp.connect();
-                const pk = (r && r.publicKey) || lp.publicKey;
-                if (!pk) throw new Error("no publicKey");
-                return pk.toString();
-              } catch (e2) {
-                if (isRejection(e2)) throw e2; // 사용자가 거절한 것이므로 다른 방식을 더 시도하지 않는다
-                e.fallbackError = e2;
-              }
+          let first = null;
+          for (const w of ws) {
+            try {
+              const addr = await viaStandard(w);
+              connectedWith = w;
+              return addr;
+            } catch (e) {
+              if (isRejection(e)) throw e; // 사용자가 거절했으면 다른 방식을 더 시도하지 않는다
+              if (!first) first = e;
+              else first.fallbackError = e;
             }
-            throw e;
           }
+          // 그래도 안 되면 같은 지갑의 구형 주입 provider로 시도한다.
+          for (const lp of lps) {
+            try {
+              const r = await lp.connect();
+              const pk = (r && r.publicKey) || lp.publicKey;
+              if (!pk) throw new Error("no publicKey");
+              connectedWith = lp;
+              return pk.toString();
+            } catch (e2) {
+              if (isRejection(e2)) throw e2;
+              first.fallbackError = e2;
+            }
+          }
+          throw first;
         },
         async disconnect() {
-          const d = w.features["standard:disconnect"];
-          try { if (d) await d.disconnect(); } finally {
-            for (const lp of lps) if (lp.disconnect) { try { await lp.disconnect(); } catch { /* ignore */ } }
-          }
+          const w = connectedWith;
+          if (!w) return;
+          const d = w.features && w.features["standard:disconnect"];
+          if (d) await d.disconnect();
+          else if (w.disconnect) await w.disconnect();
         },
       });
     }
@@ -894,10 +914,12 @@
   }
   function describeError(e) {
     if (e && e.noAccount) return { text: errMessage(e), detail: "" };
-    return { text: isRejection(e) ? t("walletRejected") : t("walletFailed"), detail: rawError(e) };
+    // 지갑이 "Not Connected"라고만 답하면: 잠겨 있거나 계정이 선택되지 않았거나 다른 지갑 확장과 충돌한 경우가 많다.
+    const hint = /not connected/i.test(errMessage(e) + " " + errMessage(e && e.fallbackError)) ? t("walletHintNotConnected") : "";
+    return { text: isRejection(e) ? t("walletRejected") : t("walletFailed"), detail: rawError(e), hint };
   }
 
-  function setWalletMsg(text, detail) {
+  function setWalletMsg(text, detail, hint) {
     const m = $("walletMsg");
     m.textContent = text || "";
     if (text && detail) {
@@ -905,6 +927,12 @@
       s.className = "wdetail";
       s.textContent = detail;
       m.append(s);
+    }
+    if (text && hint) {
+      const h = document.createElement("small");
+      h.className = "wdetail whint";
+      h.textContent = hint;
+      m.append(h);
     }
     m.hidden = !text;
   }
@@ -963,7 +991,7 @@
       lastError = { wallet: w.name, raw: rawError(e) };
       if (mine === attempt) {
         const d = describeError(e);
-        setWalletMsg(`${w.name}: ${d.text}`, d.detail);
+        setWalletMsg(`${w.name}: ${d.text}`, d.detail, d.hint);
         setBusy(false);
         diagOpen = true; // 실패하면 진단 정보를 바로 펼쳐 복사할 수 있게 한다
         renderWalletChoices();

@@ -133,3 +133,5 @@ dialog menu{align-items:center}
 .wdiag{margin-top:.6rem;font-size:.85rem}
 .wdiag summary{cursor:pointer;color:var(--muted)}
 .wdiag pre{white-space:pre-wrap;word-break:break-all;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.5rem;margin:.4rem 0;font-size:.75rem}
+
+.wmsg .whint{color:var(--fg);font-weight:600}
