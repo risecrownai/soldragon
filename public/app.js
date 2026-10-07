@@ -55,7 +55,7 @@
 
   // 저장된 순서를 적용한다. 순서에 없는 경전(새로 추가된 것)은 뒤에 붙는다.
   const all = () => {
-    const base = [...window.DEFAULT_SUTRAS, ...custom];
+    const base = [...window.DEFAULT_SUTRAS, ...(cloudOn() ? Cloud.state.sutras : []), ...custom];
     const rank = (s) => { const i = order.indexOf(s.id); return i === -1 ? Infinity : i; };
     return base
       .map((s, i) => [s, i])
@@ -65,8 +65,15 @@
 
   let selectedId = null; // 순서 변경 모드에서 고른 경전
 
-  // 경전 추가·수정·삭제·가져오기는 암호화폐 지갑이 연결된 때만 허용한다.
-  const canEdit = () => !!wallet;
+  // 클라우드가 설정되어 있으면(/api 준비 완료) 구글 로그인 + 서버가 확인한 지갑이 있어야 추가·수정·삭제할 수 있다.
+  // 설정이 없으면 예전처럼 지갑이 연결된 때만 브라우저에 저장하게 한다.
+  const cloudOn = () => !!(window.Cloud && Cloud.state.ready);
+  const canEdit = () => (cloudOn() ? Cloud.canWrite() : !!wallet);
+  // 이 경전을 내가 고칠 수 있는가: 클라우드 경전은 내 것만, 브라우저 경전은 지갑 연결 시
+  const canEditItem = (s) => (s.cloud ? s.mine && canEdit() : !!wallet);
+  const lockHint = () => t(cloudOn() ? "editLockedCloud" : "editLocked");
+  const findCustom = (id) => custom.find((c) => c.id === id) || (cloudOn() ? Cloud.state.sutras.find((c) => c.id === id) : null);
+  const cloudErr = (e) => alert(Cloud.errText(e));
 
   const indexOfId = (id) => all().findIndex((s) => s.id === id);
 
@@ -127,30 +134,65 @@
         if (ev.key === "ArrowUp") { ev.preventDefault(); moveTo(s.id, idx - 1, true); }
         else if (ev.key === "ArrowDown") { ev.preventDefault(); moveTo(s.id, idx + 1, true); }
       };
+      if (s.custom && cloudOn()) {
+        const badge = document.createElement("span");
+        badge.className = "badge" + (s.cloud ? (s.isPublic ? " pub" : " priv") : " loc");
+        badge.textContent = s.cloud ? t(s.isPublic ? "badgePublic" : "badgePrivate") : t("badgeLocal");
+        if (s.cloud && !s.mine) badge.title = t("authorBy", s.author);
+        else if (s.cloud) badge.title = t(s.isPublic ? "visPublic" : "visPrivate");
+        b.append(" ", badge);
+      }
       li.append(b);
-      if (s.custom && !reorderMode) {
+      if (s.custom && !reorderMode && (!s.cloud || s.mine)) {
+        const ok = canEditItem(s);
         const ed = document.createElement("button");
         ed.className = "edit";
         ed.textContent = "✎";
-        ed.title = canEdit() ? t("edit") : t("editLocked");
+        ed.title = ok ? t("edit") : lockHint();
         ed.setAttribute("aria-label", `${t("edit")}: ${titleOf(s)}`);
-        ed.disabled = !canEdit();
+        ed.disabled = !ok;
         ed.onclick = () => openEditor(s.id);
         const d = document.createElement("button");
         d.className = "del";
         d.textContent = "✕";
-        d.title = canEdit() ? t("del") : t("editLocked");
+        d.title = ok ? t("del") : lockHint();
         d.setAttribute("aria-label", `${t("del")}: ${titleOf(s)}`);
-        d.disabled = !canEdit();
-        d.onclick = () => {
-          if (!canEdit()) return;
+        d.disabled = !ok;
+        d.onclick = async () => {
+          if (!canEditItem(s)) return;
           if (!confirm(t("delConfirm", titleOf(s)))) return;
-          custom = custom.filter((c) => c.id !== s.id);
-          saveCustom(custom);
+          if (s.cloud) {
+            try { await Cloud.removeSutra(s.id); } catch (e) { cloudErr(e); return; }
+          } else {
+            custom = custom.filter((c) => c.id !== s.id);
+            saveCustom(custom);
+          }
           if (current && current.id === s.id) { stop(); current = null; $("reader").hidden = true; $("homeHero").hidden = false; $("empty").hidden = false; }
           renderList();
         };
-        li.append(ed, d);
+        const extra = [];
+        if (!s.cloud && cloudOn()) {
+          // 이 브라우저의 경전을 클라우드(비공개)로 옮긴다
+          const mv = document.createElement("button");
+          mv.className = "edit";
+          mv.textContent = "☁";
+          mv.title = canEdit() ? t("moveToCloud") : lockHint();
+          mv.setAttribute("aria-label", `${t("moveToCloud")}: ${titleOf(s)}`);
+          mv.disabled = !canEdit();
+          mv.onclick = async () => {
+            if (!canEdit() || !confirm(t("moveConfirm", titleOf(s)))) return;
+            try {
+              await Cloud.importSutras([{ title: s.title, lang: s.lang, paragraphs: s.paragraphs }]);
+            } catch (e) { cloudErr(e); return; }
+            custom = custom.filter((c) => c.id !== s.id);
+            saveCustom(custom);
+            if (current && current.id === s.id) goHome();
+            renderList();
+            alert(t("movedToCloud", 1));
+          };
+          extra.push(mv);
+        }
+        li.append(...extra, ed, d);
       }
       ul.append(li);
     });
@@ -180,7 +222,8 @@
     $("addBtn").disabled = !ok;
     $("importFile").disabled = !ok;
     $("importLabel").classList.toggle("disabled", !ok);
-    $("addBtn").title = $("importLabel").title = ok ? "" : t("editLocked");
+    $("addBtn").title = $("importLabel").title = ok ? "" : lockHint();
+    $("editHint").textContent = lockHint();
     $("editHint").hidden = ok;
     if (!ok && $("addDialog").open) $("addDialog").close();
     renderList();
@@ -211,8 +254,16 @@
     renderParas();
     renderList();
     populateVoiceNames();
+    mountSocial();
     // 브라우저 정책상 사용자 클릭 이후에만 자동 재생이 가능합니다.
     if (fromUser && $("auto").checked) play(0);
+  }
+
+  // 좋아요·점수·댓글: 기본 경전과 공개된 클라우드 경전에만 붙는다(브라우저에만 있는 경전은 제외).
+  function mountSocial() {
+    const box = $("social");
+    if (!cloudOn() || !current || (current.custom && !current.cloud)) { box.hidden = true; box.textContent = ""; return; }
+    Cloud.mountSocial(box, current.id, { socialAllowed: !current.cloud || current.isPublic });
   }
 
   // 경전에 맞는 상단 그림(부처님, 비로자나불, 관세음보살, 연꽃, 용, 태양 중 선택)
@@ -586,10 +637,16 @@
 
   function openEditor(id) {
     if (!canEdit()) return;
-    const sutra = id ? custom.find((c) => c.id === id) : null;
+    const sutra = id ? findCustom(id) : null;
+    if (id && !sutra) return;
+    if (sutra && !canEditItem(sutra)) return;
     editingId = sutra ? sutra.id : null;
     $("addForm").reset();
     const f = $("addForm").elements;
+    // 클라우드에 저장하는 경전(새로 추가하거나 클라우드 경전을 고칠 때)만 공개 범위를 고른다.
+    const toCloud = cloudOn() && (!sutra || sutra.cloud);
+    $("visLabel").hidden = !toCloud;
+    f.visibility.value = sutra && sutra.cloud && sutra.isPublic ? "public" : "private";
     if (sutra) {
       f.title.value = sutra.title;
       if (![...f.lang.options].some((o) => o.value === sutra.lang)) f.lang.append(new Option(sutra.lang, sutra.lang));
@@ -610,7 +667,7 @@
   $("cancelAdd").onclick = () => dlg.close();
   dlg.addEventListener("close", () => { editingId = null; });
 
-  $("addForm").addEventListener("submit", () => {
+  $("addForm").addEventListener("submit", async (ev) => {
     if (!canEdit()) return;
     const f = new FormData($("addForm"));
     const o = paras(f.get("orig")).map(clean);
@@ -622,6 +679,21 @@
       lang: f.get("lang"),
       paragraphs: o.map((orig, i) => ({ orig, en: e[i] || "", ko: k[i] || "" })),
     };
+    const editId = editingId;
+    const target = editId ? findCustom(editId) : null;
+    if (cloudOn() && (!editId || (target && target.cloud))) {
+      // 클라우드 저장: 서버가 성공해야 창을 닫는다(실패하면 입력 내용을 그대로 둔다).
+      ev.preventDefault();
+      $("addSubmit").disabled = true;
+      try {
+        const saved = await Cloud.saveSutra(editId, { ...data, isPublic: f.get("visibility") === "public" });
+        dlg.close();
+        const wasOpen = current && current.id === saved.id;
+        renderList();
+        if (wasOpen || !editId) open(saved.id, false);
+      } catch (e) { cloudErr(e); } finally { $("addSubmit").disabled = false; }
+      return;
+    }
     if (editingId) {
       const sutra = custom.find((c) => c.id === editingId);
       if (!sutra) return;
@@ -640,6 +712,8 @@
   });
 
   // 내보내기: 고른 경전만 JSON 파일로 저장한다(직접 추가한 경전만 대상).
+  // 내보낼 수 있는 경전: 내 클라우드 경전 + 이 브라우저의 경전
+  const exportable = () => [...(cloudOn() ? Cloud.state.sutras.filter((x) => x.mine) : []), ...custom];
   const exportBoxes = () => [...$("exportList").querySelectorAll("input")];
   function syncExport() {
     const boxes = exportBoxes();
@@ -652,7 +726,7 @@
   $("exportBtn").onclick = () => {
     const ul = $("exportList");
     ul.textContent = "";
-    for (const s of custom) {
+    for (const s of exportable()) {
       const li = document.createElement("li");
       const label = document.createElement("label");
       label.className = "check";
@@ -667,7 +741,7 @@
       li.append(label);
       ul.append(li);
     }
-    const none = custom.length === 0;
+    const none = exportable().length === 0;
     $("exportEmpty").hidden = !none;
     $("exportAllLabel").hidden = none;
     syncExport();
@@ -680,7 +754,7 @@
   $("cancelExport").onclick = () => $("exportDialog").close();
   $("exportForm").addEventListener("submit", () => {
     const ids = new Set(exportBoxes().filter((x) => x.checked).map((x) => x.value));
-    const picked = custom.filter((s) => ids.has(s.id));
+    const picked = exportable().filter((s) => ids.has(s.id)).map((s) => ({ title: s.title, lang: s.lang, paragraphs: s.paragraphs }));
     if (!picked.length) return;
     const blob = new Blob([JSON.stringify(picked, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -697,27 +771,33 @@
     try {
       const data = JSON.parse(await file.text());
       if (!Array.isArray(data)) throw new Error();
-      let n = 0;
+      const list = [];
       for (const s of data) {
-        if (typeof s.title !== "string" || !Array.isArray(s.paragraphs)) continue;
-        custom.push({
-          id: "c" + Date.now().toString(36) + n,
-          custom: true,
-          title: s.title.slice(0, 100),
-          lang: typeof s.lang === "string" ? s.lang : "en-US",
-          paragraphs: s.paragraphs
-            .filter((p) => p && typeof p.orig === "string")
-            .map((p) => ({
-              orig: p.orig,
-              en: typeof p.en === "string" ? p.en : "",
-              ko: typeof p.ko === "string" ? p.ko : "",
-            })),
-        });
-        n++;
+        if (!s || typeof s.title !== "string" || !Array.isArray(s.paragraphs)) continue;
+        const ps = s.paragraphs
+          .filter((p) => p && typeof p.orig === "string")
+          .map((p) => ({
+            orig: p.orig,
+            en: typeof p.en === "string" ? p.en : "",
+            ko: typeof p.ko === "string" ? p.ko : "",
+          }));
+        if (!ps.length) continue;
+        list.push({ title: s.title.slice(0, 100), lang: typeof s.lang === "string" ? s.lang : "en-US", paragraphs: ps });
       }
+      if (cloudOn()) {
+        // 클라우드에는 항상 비공개로 올린다(공개는 경전을 열어 직접 바꾼다).
+        let n = 0;
+        if (list.length) {
+          try { n = await Cloud.importSutras(list.slice(0, 50)); } catch (e) { cloudErr(e); return; }
+        }
+        renderList();
+        alert(t("imported", n));
+        return;
+      }
+      list.forEach((s, n) => custom.push({ id: "c" + Date.now().toString(36) + n, custom: true, ...s }));
       saveCustom(custom);
       renderList();
-      alert(t("imported", n));
+      alert(t("imported", list.length));
     } catch {
       alert(t("badJson"));
     }
@@ -773,13 +853,14 @@
       if (!acct) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
       const ev = w.features["standard:events"];
       if (ev) ev.on("change", ({ accounts }) => { if (accounts && !accounts.length) onDisconnect(); });
-      return acct.address;
+      return acct;
     };
 
     const list = [];
     for (const ws of groups.values()) {
       const lps = legacyProvidersFor(ws[0].name);
       let connectedWith = null; // 연결에 성공한 방식(해제할 때 사용)
+      let connectedAcct = null;
       list.push({
         name: ws[0].name,
         icon: ws[0].icon,
@@ -787,9 +868,10 @@
           let first = null;
           for (const w of ws) {
             try {
-              const addr = await viaStandard(w);
+              const acct = await viaStandard(w);
               connectedWith = w;
-              return addr;
+              connectedAcct = acct;
+              return acct.address;
             } catch (e) {
               if (isRejection(e)) throw e; // 사용자가 거절했으면 다른 방식을 더 시도하지 않는다
               if (!first) first = e;
@@ -811,6 +893,22 @@
           }
           throw first;
         },
+        // 클라우드 계정에 지갑을 묶을 때 쓰는 메시지 서명(거래가 아니다)
+        async signMessage(bytes) {
+          const w = connectedWith;
+          const f = w && w.features && w.features["solana:signMessage"];
+          if (f) {
+            const [out] = await f.signMessage({ account: connectedAcct, message: bytes });
+            return out.signature;
+          }
+          if (w && typeof w.signMessage === "function") {
+            const r = await w.signMessage(bytes, "utf8");
+            return (r && r.signature) || r;
+          }
+          const err = new Error("sign unsupported");
+          err.code = "sign_unsupported";
+          throw err;
+        },
         async disconnect() {
           const w = connectedWith;
           if (!w) return;
@@ -830,6 +928,11 @@
           if (!pk) { const err = new Error(t("walletNoAccount")); err.noAccount = true; throw err; }
           if (p.on) p.on("disconnect", onDisconnect);
           return pk.toString();
+        },
+        async signMessage(bytes) {
+          if (typeof p.signMessage !== "function") { const err = new Error("sign unsupported"); err.code = "sign_unsupported"; throw err; }
+          const r = await p.signMessage(bytes, "utf8");
+          return (r && r.signature) || r;
         },
         disconnect: () => p.disconnect(),
       });
@@ -977,7 +1080,7 @@
     }, WALLET_WAIT_MS);
     try {
       const addr = await w.connect();
-      wallet = { name: w.name, disconnect: w.disconnect, addr };
+      wallet = { name: w.name, disconnect: w.disconnect, signMessage: w.signMessage, addr };
       clearTimeout(slow);
       setWalletMsg("");
       setBusy(false);
@@ -1139,6 +1242,106 @@
   });
   $("network").onchange = refreshInfo;
 
+  // ---------- 클라우드 계정 (구글 로그인 + 지갑 묶기) ----------
+  const accountDlg = $("accountDialog");
+  const accMsg = (text) => { $("accountMsg").textContent = text || ""; $("accountMsg").hidden = !text; };
+
+  function refreshAccountButton() {
+    const b = $("accountBtn");
+    b.hidden = !cloudOn();
+    if (!cloudOn()) return;
+    b.textContent = Cloud.isLoggedIn() ? Cloud.state.me.user.name : t("accountBtn");
+    b.title = Cloud.isLoggedIn() ? Cloud.state.me.user.email || "" : "";
+  }
+
+  function afterCloudChange() {
+    refreshAccountButton();
+    updateEditLock(); // 목록도 다시 그린다
+    if (current && (current.cloud || !current.custom)) {
+      const fresh = all().find((x) => x.id === current.id);
+      if (!fresh) goHome(); else { current = fresh; mountSocial(); }
+    }
+    if (accountDlg.open) renderAccount();
+  }
+
+  const mkBtn = (key, onclick, cls = "btn") => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = cls;
+    b.textContent = t(key);
+    b.onclick = onclick;
+    return b;
+  };
+  const para = (text, cls = "note") => {
+    const p = document.createElement("p");
+    p.className = cls;
+    p.textContent = text;
+    return p;
+  };
+
+  function renderAccount() {
+    const body = $("accountBody");
+    body.textContent = "";
+    if (!Cloud.isLoggedIn()) {
+      body.append(para(t("loginLead")));
+      const holder = document.createElement("div");
+      holder.className = "gsi-holder";
+      body.append(holder);
+      Cloud.renderLoginButton(holder, () => { accMsg(""); afterCloudChange(); }, (e) => accMsg(Cloud.errText(e)));
+      return;
+    }
+    const me = Cloud.state.me;
+    body.append(para(t("loggedInAs", me.user.name + (me.user.email ? ` (${me.user.email})` : "")), ""));
+    if (me.wallet) {
+      body.append(para(t("walletLinkedAs", short(me.wallet.address)), ""));
+      body.append(mkBtn("walletUnlink", async () => {
+        try { await Cloud.unlinkWallet(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
+      }, "btn small ghost"));
+    } else {
+      body.append(para(t("walletNotLinked")));
+      if (!wallet) {
+        body.append(mkBtn("walletLinkConnect", () => { accountDlg.close(); $("walletBtn").click(); }, "btn primary"));
+      } else {
+        body.append(mkBtn("walletLinkSign", async () => {
+          // 지갑의 서명 창이 가려지지 않도록 이 창은 잠시 닫고, 끝나면 다시 연다.
+          accountDlg.close();
+          const note = $("walletInfo");
+          note.hidden = false;
+          note.textContent = t("signing");
+          try {
+            await Cloud.linkWallet(wallet);
+            accMsg(t("linkedOk"));
+          } catch (e) {
+            console.error("지갑 묶기 실패", e);
+            accMsg(e && e.code ? Cloud.errText(e) : `${t("errGeneric")} (${errMessage(e)})`);
+          }
+          refreshInfo();
+          afterCloudChange();
+          accountDlg.show();
+          renderAccount();
+        }, "btn primary"));
+      }
+    }
+    const row = document.createElement("div");
+    row.className = "acc-actions";
+    row.append(
+      mkBtn("logout", async () => {
+        try { await Cloud.logout(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
+      }),
+      mkBtn("deleteAccount", async () => {
+        if (!confirm(t("deleteAccountConfirm"))) return;
+        try { await Cloud.deleteAccount(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
+      }, "btn ghost"),
+    );
+    body.append(row);
+  }
+
+  $("accountBtn").onclick = () => { accMsg(""); accountDlg.show(); renderAccount(); };
+  $("closeAccount").onclick = () => accountDlg.close();
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && accountDlg.open) accountDlg.close();
+  });
+
   // ---------- 화면 언어 전환 / 시작 ----------
   $("uiLang").onchange = () => {
     uiLang = $("uiLang").value;
@@ -1149,8 +1352,13 @@
     populateVoiceNames();
     showNote(noteKey);
     if ($("walletDialog").open) renderWalletChoices();
+    refreshAccountButton();
+    if (accountDlg.open) renderAccount();
+    mountSocial();
   };
 
   applyUiText();
   updateEditLock();
+  // 서버(/api)가 준비된 경우에만 클라우드 기능을 켠다. 아니면 예전처럼 브라우저 저장만 쓴다.
+  if (window.Cloud) Cloud.init(t).then(() => { if (cloudOn()) afterCloudChange(); });
 })();
