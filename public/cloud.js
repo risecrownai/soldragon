@@ -191,7 +191,10 @@ window.Cloud = (() => {
         send.disabled = true;
         act(async () => {
           const r = await api("POST", path + "/comments", { body });
+          // 등록이 끝나면 입력창을 비운다(다시 그릴 때 입력창의 값을 draft 로 되읽으므로 입력창도 함께 비운다).
           draft = "";
+          ta.value = "";
+          syncCounter();
           return r;
         }).finally(() => { send.disabled = !isLoggedIn(); });
       };

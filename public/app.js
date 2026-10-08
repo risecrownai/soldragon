@@ -576,12 +576,13 @@
       else localStorage.removeItem(NAME_KEY + lang);
     } catch { /* ignore */ }
     refreshVoiceNote();
+    applySettingsNow();
   };
 
   const savedPitch = lsGet("sutras.pitch");
   if (savedPitch !== null) $("pitch").value = savedPitch;
   const showPitch = () => { $("pitchOut").textContent = parseFloat($("pitch").value).toFixed(2); };
-  $("pitch").oninput = () => { showPitch(); lsSet("sutras.pitch", $("pitch").value); };
+  $("pitch").oninput = () => { showPitch(); lsSet("sutras.pitch", $("pitch").value); applySettingsNow(); };
   showPitch();
 
   // 안내 문구는 키로 보관해 두었다가 화면 언어가 바뀌면 다시 그린다.
@@ -609,12 +610,28 @@
       sleep(80).then(() => my === token && run(my));
     } else if (player.state === "paused") player.unit = 0;
   };
+
+  // 볼륨·속도·음높이·음성은 이미 읽기 시작한 조각에는 적용되지 않으므로, 낭독 중에 바꾸면
+  // 지금 읽던 조각(최대 160자)을 새 설정으로 처음부터 다시 읽는다. 슬라이더를 끄는 동안의 반복 재시작은 막는다.
+  let restartTimer = null;
+  function applySettingsNow() {
+    clearTimeout(restartTimer);
+    if (player.state !== "playing" || !tts) return;
+    restartTimer = setTimeout(() => {
+      if (player.state !== "playing") return;
+      token++;
+      tts.cancel();
+      const my = ++token;
+      sleep(80).then(() => my === token && run(my));
+    }, 250);
+  }
   $("repeat").onchange = $("scope").onchange = updateButtons;
 
   const savedVol = lsGet("sutras.volume");
   if (savedVol !== null) $("volume").value = savedVol;
   const showVolume = () => { $("volumeOut").textContent = Math.round($("volume").value * 100) + "%"; };
-  $("volume").oninput = () => { showVolume(); lsSet("sutras.volume", $("volume").value); };
+  $("volume").oninput = () => { showVolume(); lsSet("sutras.volume", $("volume").value); applySettingsNow(); };
+  $("rate").oninput = applySettingsNow;
   showVolume();
 
   $("playBtn").onclick = () => play(0);
@@ -1376,6 +1393,13 @@
     if (accountDlg.open) renderAccount();
     mountSocial();
   };
+
+  // 낭독 조절 메뉴(.controls)가 상단 바 바로 아래에 붙어 있도록 상단 바 높이를 CSS 변수로 알려 준다.
+  const topbar = document.querySelector(".topbar");
+  const syncTopbar = () => document.documentElement.style.setProperty("--topbar-h", topbar.offsetHeight + "px");
+  syncTopbar();
+  if (window.ResizeObserver) new ResizeObserver(syncTopbar).observe(topbar);
+  else window.addEventListener("resize", syncTopbar);
 
   applyUiText();
   updateEditLock();
