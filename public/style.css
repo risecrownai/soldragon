@@ -159,3 +159,5 @@ dialog menu{align-items:center}
 .comments li{border-left:3px solid var(--line);padding:.2rem .8rem;margin:.6rem 0}
 .c-head{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
 .c-body{margin:.1rem 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.addr-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.addr{font-size:.8rem;word-break:break-all;user-select:all;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.2rem .4rem}
