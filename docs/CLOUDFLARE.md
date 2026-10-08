@@ -11,7 +11,7 @@ PC에 아무것도 설치하지 않고 **브라우저만으로** 배포합니다
 ## 1. D1 데이터베이스 만들기
 1. 대시보드 왼쪽 *Storage & Databases → D1 SQL Database → Create database*
 2. 이름 `soldragon` → Create
-3. 만든 DB의 **Console** 탭을 열고, 저장소의 [`migrations/0001_init.sql`](../migrations/0001_init.sql) 내용을 **전부 복사해 붙여 넣고 실행**합니다. (한 번에 안 되면 `CREATE TABLE …;` / `CREATE INDEX …;` 문장을 하나씩 나눠 실행)
+3. 만든 DB의 **Console** 탭을 열고, 저장소의 [`migrations/0001_init.sql`](../migrations/0001_init.sql) 내용을 **전부 복사해 붙여 넣고 실행**합니다. (이 파일에는 주석이 없습니다. D1 콘솔은 줄바꿈을 없애고 실행하므로 `--` 주석이 있으면 뒤 내용이 모두 주석 처리되어 `incomplete input` 오류가 납니다. 한 번에 안 되면 `CREATE …;` 문장을 하나씩 나눠 실행하세요.)
 4. *Tables* 탭에 `users, nonces, sutras, reactions, comments` 5개가 보이면 성공입니다.
 
 ## 2. Pages 프로젝트 만들기 (Git 연결)
