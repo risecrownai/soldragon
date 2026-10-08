@@ -14,12 +14,13 @@ CREATE TABLE nonces (
 CREATE INDEX idx_nonces_address ON nonces(address);
 
 -- 사용자가 추가한 경전(기본 경전은 코드에 있고 DB에 없다)
+-- JSON: [{orig,en,ko}]
 CREATE TABLE sutras (
   id         TEXT PRIMARY KEY,
   owner_id   TEXT NOT NULL REFERENCES users(id),
   title      TEXT NOT NULL,
   lang       TEXT NOT NULL,
-  paragraphs TEXT NOT NULL,           -- JSON: [{orig,en,ko}]
+  paragraphs TEXT NOT NULL,           
   is_public  INTEGER NOT NULL DEFAULT 0 CHECK (is_public IN (0,1)),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
