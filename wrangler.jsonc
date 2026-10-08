@@ -12,7 +12,7 @@
       "binding": "DB",
       "database_name": "soldragon",
       // 대시보드 D1 화면의 Database ID 로 바꾸세요(비밀 값이 아닙니다).
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "database_id": "451c624f-af9f-4787-b927-a8f0c9f6bebf",
       "migrations_dir": "migrations"
     }
   ],
