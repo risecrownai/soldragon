@@ -990,11 +990,26 @@
     if (!wallet) return;
     const info = $("walletInfo");
     info.hidden = false;
+    info.title = `${wallet.addr}\n${t("copyAddress")}`;
+    info.style.cursor = "pointer";
     info.textContent = short(wallet.addr);
     try {
       info.textContent = `${short(wallet.addr)} · ${(await balance(wallet.addr)).toFixed(4)} SOL`;
     } catch { /* 잔액 조회 실패 시 주소만 표시 */ }
   }
+
+  // 전체 지갑 주소를 클립보드에 복사한다(실패하면 선택해서 복사할 수 있게 주소를 그대로 보여 준다).
+  async function copyText(text, el) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const old = el.textContent;
+      el.textContent = t("copied");
+      setTimeout(() => { el.textContent = old; }, 1500);
+    } catch {
+      window.prompt(t("copyAddress"), text);
+    }
+  }
+  $("walletInfo").onclick = () => { if (wallet) copyText(wallet.addr, $("walletInfo")); };
 
   function onDisconnect() {
     wallet = null;
@@ -1282,11 +1297,24 @@
 
   let pendingLogin = false; // 로그인하려고 지갑을 연결하는 중이면, 연결이 끝나자마자 로그인 창을 다시 연다
 
+  // 전체 주소(선택·복사 가능) + 복사 버튼
+  function addressRow(addr) {
+    const row = document.createElement("div");
+    row.className = "addr-row";
+    const code = document.createElement("code");
+    code.className = "addr";
+    code.textContent = addr;
+    const btn = mkBtn("copyAddress", () => copyText(addr, btn), "btn small ghost");
+    row.append(code, btn);
+    return row;
+  }
+
   function renderAccount() {
     const body = $("accountBody");
     body.textContent = "";
     if (Cloud.isLoggedIn()) {
       body.append(para(t("loggedInAs", short(Cloud.state.me.user.address)), ""));
+      body.append(addressRow(Cloud.state.me.user.address));
       const row = document.createElement("div");
       row.className = "acc-actions";
       row.append(
@@ -1307,6 +1335,7 @@
       return;
     }
     body.append(para(`${wallet.name} · ${short(wallet.addr)}`, ""));
+    body.append(addressRow(wallet.addr));
     body.append(mkBtn("walletLinkSign", async () => {
       // 지갑의 서명 창이 가려지지 않도록 이 창은 잠시 닫고, 끝나면 다시 연다.
       accountDlg.close();
