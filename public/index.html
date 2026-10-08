@@ -22,6 +22,7 @@
       <option value="mainnet-beta">Mainnet</option>
       <option value="devnet">Devnet</option>
     </select>
+    <button id="accountBtn" class="btn" hidden></button>
     <span id="walletInfo" class="wallet-info" hidden></span>
     <button id="walletBtn" class="btn primary" data-i18n="walletConnect"></button>
   </div>
@@ -115,6 +116,7 @@
       <p id="ttsNote" class="note" hidden></p>
       <p id="intro" class="note intro" hidden></p>
       <div id="paras"></div>
+      <section id="social" class="social" hidden></section>
     </section>
     <p id="empty" class="note" data-i18n="selectPrompt"></p>
   </main>
@@ -132,6 +134,12 @@
         <option value="ja-JP" data-i18n="langJa"></option>
         <option value="bo" data-i18n="langBo"></option>
         <option value="en-US" data-i18n="langEn"></option>
+      </select>
+    </label>
+    <label id="visLabel" hidden><span data-i18n="fVisibility"></span>
+      <select name="visibility">
+        <option value="private" data-i18n="visPrivate"></option>
+        <option value="public" data-i18n="visPublic"></option>
       </select>
     </label>
     <label><span><span data-i18n="fOrig"></span> <small data-i18n="fOrigHint"></small></span>
@@ -164,6 +172,17 @@
   </form>
 </dialog>
 
+<dialog id="accountDialog">
+  <div class="wdlg">
+    <h2 data-i18n="accountTitle"></h2>
+    <div id="accountBody"></div>
+    <p id="accountMsg" class="note wmsg" role="alert" hidden></p>
+    <menu>
+      <button type="button" id="closeAccount" class="btn" data-i18n="close"></button>
+    </menu>
+  </div>
+</dialog>
+
 <div id="walletBackdrop" class="wbackdrop" hidden></div>
 <dialog id="walletDialog">
   <div class="wdlg">
@@ -178,6 +197,7 @@
 
 <script src="i18n.js"></script>
 <script src="sutras.js"></script>
+<script src="cloud.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

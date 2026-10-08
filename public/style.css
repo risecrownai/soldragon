@@ -135,3 +135,27 @@ dialog menu{align-items:center}
 .wdiag pre{white-space:pre-wrap;word-break:break-all;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.5rem;margin:.4rem 0;font-size:.75rem}
 
 .wmsg .whint{color:var(--fg);font-weight:600}
+/* 클라우드: 배지, 계정 창, 좋아요·점수·댓글 */
+.badge{font-size:.7rem;border:1px solid currentColor;border-radius:999px;padding:0 .4rem;white-space:nowrap;opacity:.85}
+.badge.pub{color:#2f7d32}.badge.priv{color:var(--muted)}.badge.loc{color:var(--rose)}
+#sutraList li.active .badge{color:#fff}
+#sutraList button.edit{background:none;border:0;color:inherit;cursor:pointer;padding:0 .3rem}
+#sutraList button:disabled{opacity:.4;cursor:not-allowed}
+#accountDialog{position:fixed;top:4.5rem;right:1rem;left:auto;margin:0;z-index:30}
+#accountBody{display:flex;flex-direction:column;gap:.6rem;align-items:flex-start}
+#accountBody p{margin:0}
+.acc-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.gsi-holder{min-height:44px}
+.social{border-top:2px solid var(--line);margin-top:2rem;padding-top:1rem}
+.social h3{margin:.2rem 0 .6rem;font-size:1.05rem}.social h4{margin:1rem 0 .4rem}
+.social-row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.social .btn.on{background:var(--gold);color:#fff}
+.stars{display:inline-flex}
+.star{background:none;border:0;font-size:1.5rem;line-height:1;color:var(--gold);cursor:pointer;padding:0 .1rem}
+.star:disabled,.social .btn:disabled{opacity:.45;cursor:not-allowed}
+.comment-form{display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap}
+.comment-form textarea{flex:1;min-width:12rem;resize:vertical}
+.comments{list-style:none;padding:0;margin:.8rem 0 0}
+.comments li{border-left:3px solid var(--line);padding:.2rem .8rem;margin:.6rem 0}
+.c-head{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+.c-body{margin:.1rem 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
