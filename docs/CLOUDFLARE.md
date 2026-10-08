@@ -1,47 +1,32 @@
-# Cloudflare Pages + D1 배포 가이드 (웹 대시보드만 사용)
+# Cloudflare Workers + D1 배포 가이드 (웹 대시보드만 사용)
 
-PC에 아무것도 설치하지 않고 **브라우저만으로** 배포합니다. 구성: 정적 파일(`public/`) + Pages Functions(`functions/api/[[path]].js` → `src/api.js`) + D1(SQLite) 데이터베이스. 로그인은 **지갑 서명**이라 구글 등 외부 서비스 설정이 필요 없습니다.
+PC에 아무것도 설치하지 않고 **브라우저만으로** 배포합니다. 구성: 화면 파일(`public/`, 정적 자산) + Worker(`src/worker.js` → `src/api.js`, `/api/*` 처리) + D1(SQLite) 데이터베이스. 설정은 저장소의 `wrangler.jsonc`에 있습니다. 로그인은 **지갑 서명**이라 구글 등 외부 서비스 설정이 필요 없습니다.
 
-> 저장소 루트에 `wrangler.toml` 파일을 만들지 마세요. 있으면 대시보드가 설정을 그 파일에서만 읽어 아래 바인딩·변수 화면이 잠깁니다. (터미널로 쓰려면 `wrangler.example.toml` 참고)
-
-## 0. 준비
-- Cloudflare 계정(무료): https://dash.cloudflare.com/sign-up
-- GitHub의 이 저장소(`risecrownai/soldragon`). 배포할 브랜치를 정합니다. 보통 `main`이며, 아직 PR을 머지하지 않았다면 먼저 머지하거나 작업 브랜치(`claude/buddhist-scripture-website-9xgi9n`)를 쓰세요.
+> 최근 Cloudflare 대시보드는 Git 저장소를 연결하면 Pages가 아니라 **Workers**로 프로젝트를 만듭니다. 이 저장소는 그 방식에 맞춰져 있습니다. ("Bindings cannot be added to a Worker that only has static assets" 오류는 Worker 코드(`main`)가 없는 프로젝트라서 나는 것이며, 이 저장소의 `wrangler.jsonc`로 배포하면 사라집니다.)
 
 ## 1. D1 데이터베이스 만들기
 1. 대시보드 왼쪽 *Storage & Databases → D1 SQL Database → Create database*
 2. 이름 `soldragon` → Create
-3. 만든 DB의 **Console** 탭을 열고, 저장소의 [`migrations/0001_init.sql`](../migrations/0001_init.sql) 내용을 **전부 복사해 붙여 넣고 실행**합니다. (한 번에 안 되면 `CREATE TABLE …;` / `CREATE INDEX …;` 문장을 하나씩 나눠 실행)
-4. *Tables* 탭에 `users, nonces, sutras, reactions, comments` 5개가 보이면 성공입니다.
+3. 만든 DB의 **Console** 탭에 저장소의 [`migrations/0001_init.sql`](../migrations/0001_init.sql) 내용을 **전부 붙여 넣고 실행**합니다. (이 파일에는 주석이 없습니다. D1 콘솔은 줄바꿈을 없애고 실행하므로 `--` 주석이 있으면 뒤 내용이 모두 주석 처리되어 `incomplete input` 오류가 납니다. 한 번에 안 되면 `CREATE …;` 문장을 하나씩 나눠 실행하세요.)
+4. *Tables*에 `users, nonces, sutras, reactions, comments` 5개가 보이면 성공입니다.
+5. DB 화면(Overview)에서 **Database ID**(`xxxxxxxx-xxxx-…` 형식)를 복사합니다.
 
-## 2. Pages 프로젝트 만들기 (Git 연결)
-1. *Workers & Pages → Create application* 에서 **Pages** 탭의 *Import an existing Git repository → Connect to Git* (화면에 Pages가 안 보이면 "Looking to deploy Pages? Get started" 링크를 누르세요)
-2. GitHub 계정을 연결하고 저장소 `soldragon`을 선택합니다(조직 저장소면 Cloudflare 앱에 해당 저장소 접근을 허용해야 합니다).
-3. 설정
-   - Project name: `soldragon` (주소는 `https://soldragon.pages.dev`)
-   - Production branch: `main`
-   - Framework preset: **None**
-   - Build command: **비움**
-   - Build output directory: **`public`**
-4. *Save and Deploy* → 첫 배포가 끝날 때까지 기다립니다. (이 배포는 아직 DB가 연결되기 전이라 클라우드 기능은 꺼진 상태입니다.)
+## 2. wrangler.jsonc에 Database ID 넣기
+GitHub 저장소 웹 화면에서 `wrangler.jsonc`를 열고 연필(✎) 아이콘으로 편집합니다. `"database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"` 의 값을 1단계에서 복사한 ID로 바꾸고 커밋합니다(배포할 브랜치에 바로 커밋). Database ID는 비밀 값이 아닙니다. 관리자 지갑을 쓰려면 `"ADMIN_WALLETS"` 에 지갑 주소(여러 개면 쉼표로 구분)도 적습니다.
 
-## 3. D1 연결 · 비밀키 · 호환 날짜 설정
-프로젝트 → **Settings** 에서:
+## 3. Worker 프로젝트 만들기 (Git 연결)
+1. *Workers & Pages → Create application → Import a repository(Connect to Git)* 에서 GitHub 저장소 `soldragon`을 선택합니다(조직 저장소면 Cloudflare 앱에 접근을 허용).
+2. 설정: Project name `soldragon`, Production branch `main`, **Build command 비움**, **Deploy command `npx wrangler deploy`**(기본값), Root directory 비움.
+3. *Save and Deploy*. 배포가 끝나면 `https://soldragon.<계정>.workers.dev` 주소가 생깁니다.
+   - 이미 정적 자산만 있는 Worker를 만들어 두었다면, 새로 만들 필요 없이 그 프로젝트의 *Settings → Builds*에서 위 Deploy command를 확인한 뒤 *Deployments*에서 다시 배포하면 됩니다. (이름이 `wrangler.jsonc`의 `name`과 같아야 합니다. 다르면 `name` 값을 프로젝트 이름으로 고치세요.)
 
-1. **Bindings → Add → D1 database**
-   - Variable name: **`DB`** (대문자 그대로)
-   - D1 database: `soldragon`
-   - *Production*과 *Preview* 둘 다 설정
-2. **Variables and Secrets → Add**
-   - 이름 `SESSION_SECRET`, 타입 **Secret**, 값은 **32자 이상 무작위 문자열**(로그인 쿠키 서명용. 비밀번호 생성기로 만든 긴 문자열을 쓰면 됩니다. 남에게 알려주거나 저장소에 올리지 마세요. 바꾸면 모두 로그아웃됩니다.)
-   - (선택) 이름 `ADMIN_WALLETS`, 값 관리자 지갑 주소(여러 개면 쉼표로 구분). 이 지갑은 모든 댓글을 삭제할 수 있습니다.
-3. **Runtime → Compatibility date** 를 `2025-09-01` 이상으로 설정 (Production, Preview 모두)
-
-## 4. 다시 배포
-설정은 **새 배포부터** 적용됩니다. *Deployments* 탭 → 가장 최근 배포의 `⋯` → **Retry deployment** (또는 GitHub에 커밋을 하나 푸시).
+## 4. 비밀키 등록 (필수)
+프로젝트 → **Settings → Variables and Secrets → Add**
+- 이름 `SESSION_SECRET`, 타입 **Secret**, 값은 **32자 이상 무작위 문자열**(로그인 쿠키 서명용. 비밀번호 생성기로 만든 긴 문자열을 쓰세요. 남에게 알려주거나 저장소에 올리지 마세요. 바꾸면 모두 로그아웃됩니다.)
+- 저장 후 *Deploy*(또는 *Deployments → 최신 배포 다시 배포*)를 눌러 적용합니다.
 
 ## 5. 확인
-1. `https://<프로젝트>.pages.dev/api/config` 를 열어 `{"ready":true}` 가 나오는지 확인합니다. `false`면 `DB` 바인딩 이름, `SESSION_SECRET`(32자 이상)을 다시 확인하세요(변경 후 재배포했는지도).
+1. `https://<주소>/api/config` 가 `{"ready":true}` 인지 확인합니다. `false`면 `SESSION_SECRET`(32자 이상) 또는 D1 바인딩(`wrangler.jsonc`의 `database_id`)을 확인하세요. Settings → Bindings에 `DB`가 보이면 연결된 것입니다.
 2. 사이트를 열면 상단에 **로그인** 버튼이 보입니다 → *지갑 연결* → 지갑 선택(Jupiter / MetaMask / Solflare) → *서명하고 로그인*. 로그인하면 `＋ 경전 추가`가 켜지고, 경전 아래에 좋아요·점수·댓글이 나타납니다.
 3. 로그인 버튼이 없으면 클라우드 기능이 꺼진 것이며, 이 경우 사이트는 브라우저 저장 모드로 동작합니다.
 
@@ -61,10 +46,14 @@ PC에 아무것도 설치하지 않고 **브라우저만으로** 배포합니다
 
 ## (선택) 터미널로 배포·로컬 시험
 ```bash
-cp wrangler.example.toml wrangler.toml     # git에는 올라가지 않음(.gitignore)
-npx wrangler d1 create soldragon           # 나온 database_id 를 wrangler.toml 에 기입
+npx wrangler login
+npx wrangler d1 create soldragon           # 나온 database_id 를 wrangler.jsonc 에 기입
 npx wrangler d1 migrations apply soldragon --remote
+npx wrangler secret put SESSION_SECRET
+npx wrangler deploy
+
+# 로컬 시험
 echo 'SESSION_SECRET=아무_무작위_32자_이상' > .dev.vars
 npx wrangler d1 migrations apply soldragon --local
-npx wrangler pages dev public              # http://localhost:8788
+npx wrangler dev                            # http://localhost:8787
 ```
