@@ -1,8 +1,8 @@
-// 클라우드 기능(구글 로그인, 지갑 묶기, 공개/비공개 경전, 좋아요·점수·댓글)의 브라우저 쪽 코드.
+// 클라우드 기능(지갑 서명 로그인, 공개/비공개 경전, 좋아요·점수·댓글)의 브라우저 쪽 코드.
 // /api 가 설정되어 있지 않으면 ready=false 로 남아, 사이트는 예전처럼 브라우저 저장만 쓴다.
 // 사용자가 쓴 글(제목·본문·댓글·작성자 이름)은 반드시 textContent 로만 화면에 넣는다.
 window.Cloud = (() => {
-  const state = { ready: false, clientId: null, me: { user: null, wallet: null, limits: { comment: 100, sutrasPerUser: 100 } }, sutras: [] };
+  const state = { ready: false, me: { user: null, limits: { comment: 100, sutrasPerUser: 100 } }, sutras: [] };
   let tr = (k) => k; // app.js 가 init 에서 번역 함수를 넣어 준다
 
   class ApiError extends Error {
@@ -29,8 +29,7 @@ window.Cloud = (() => {
   }
 
   const isLoggedIn = () => !!state.me.user;
-  const hasWallet = () => !!state.me.wallet;
-  const canWrite = () => state.ready && isLoggedIn() && hasWallet();
+    const canWrite = () => state.ready && isLoggedIn();
 
   async function refreshMe() {
     state.me = await api("GET", "/me");
@@ -47,7 +46,6 @@ window.Cloud = (() => {
       const cfg = await res.json();
       if (!cfg.ready) return state;
       state.ready = true;
-      state.clientId = cfg.googleClientId;
       await Promise.all([refreshMe(), refreshSutras()]);
     } catch {
       state.ready = false;
@@ -55,71 +53,31 @@ window.Cloud = (() => {
     return state;
   }
 
-  // ---------- 구글 로그인 (Google Identity Services, ID 토큰을 서버가 검증) ----------
-  let gisLoading = null;
-  function loadGis() {
-    if (window.google && window.google.accounts && window.google.accounts.id) return Promise.resolve();
-    if (!gisLoading) {
-      gisLoading = new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://accounts.google.com/gsi/client";
-        s.async = true;
-        s.onload = resolve;
-        s.onerror = () => { gisLoading = null; reject(new Error("gis")); };
-        document.head.append(s);
-      });
-    }
-    return gisLoading;
-  }
-
-  async function renderLoginButton(container, onDone, onError) {
-    container.textContent = "";
-    try {
-      await loadGis();
-      window.google.accounts.id.initialize({
-        client_id: state.clientId,
-        callback: async (resp) => {
-          try {
-            state.me = await api("POST", "/auth/google", { credential: resp.credential });
-            await refreshSutras();
-            onDone();
-          } catch (e) { onError(e); }
-        },
-      });
-      window.google.accounts.id.renderButton(container, { theme: "outline", size: "large", text: "signin_with", locale: document.documentElement.lang });
-    } catch {
-      onError(new ApiError(0, "gis_failed"));
-    }
-  }
-
-  async function logout() {
-    await api("POST", "/auth/logout");
-    try { window.google.accounts.id.disableAutoSelect(); } catch { /* 무시 */ }
-    state.me = { ...state.me, user: null, wallet: null };
-    await refreshSutras();
-  }
-
-  async function deleteAccount() {
-    await api("DELETE", "/me");
-    state.me = { ...state.me, user: null, wallet: null };
-    await refreshSutras();
-  }
-
-  // ---------- 지갑 묶기: 서버가 준 메시지에 지갑으로 서명한다(거래 아님, 비용 없음) ----------
+  // ---------- 지갑 서명 로그인: 서버가 준 문구에 지갑으로 서명하면 그 지갑 주소가 계정이 된다(거래 아님, 수수료 없음) ----------
   const toB64 = (bytes) => {
     let s = "";
     for (const b of bytes) s += String.fromCharCode(b);
     return btoa(s);
   };
 
-  async function linkWallet(wallet) {
+  async function login(wallet) {
     if (!wallet || typeof wallet.signMessage !== "function") throw new ApiError(0, "sign_unsupported");
-    const { nonce, message } = await api("POST", "/wallet/challenge", { address: wallet.addr });
+    const { nonce, message } = await api("POST", "/auth/challenge", { address: wallet.addr });
     const sig = await wallet.signMessage(new TextEncoder().encode(message));
-    state.me = await api("POST", "/wallet/link", { address: wallet.addr, nonce, signature: toB64(sig) });
+    state.me = await api("POST", "/auth/login", { address: wallet.addr, nonce, signature: toB64(sig) });
+    await refreshSutras();
   }
-  async function unlinkWallet() {
-    state.me = await api("DELETE", "/wallet");
+
+  async function logout() {
+    await api("POST", "/auth/logout");
+    state.me = { ...state.me, user: null };
+    await refreshSutras();
+  }
+
+  async function deleteAccount() {
+    await api("DELETE", "/me");
+    state.me = { ...state.me, user: null };
+    await refreshSutras();
   }
 
   // ---------- 경전 ----------
@@ -263,8 +221,8 @@ window.Cloud = (() => {
   }
 
   return {
-    state, init, api, errText, isLoggedIn, hasWallet, canWrite, ApiError,
-    refreshMe, refreshSutras, renderLoginButton, logout, deleteAccount, linkWallet, unlinkWallet,
+    state, init, api, errText, isLoggedIn, canWrite, ApiError,
+    refreshMe, refreshSutras, login, logout, deleteAccount,
     saveSutra, removeSutra, importSutras, mountSocial,
   };
 })();

@@ -13,12 +13,11 @@ export function addressToKey(address) {
 }
 
 // 서버가 만드는 서명 문구. 사용자가 자기 키로 이 문구에 서명하면 지갑 소유가 증명된다.
-export function walletMessage({ address, userId, nonce, issuedAt, origin }) {
+export function walletMessage({ address, nonce, issuedAt, origin }) {
   return [
-    "Link this Solana wallet to your Sutra Reader account.",
+    "Sign in to Sutra Reader. This is not a transaction and costs nothing.",
     "",
     `Wallet: ${address}`,
-    `Account: ${userId}`,
     `Nonce: ${nonce}`,
     `Issued: ${new Date(issuedAt).toISOString()}`,
     `Origin: ${origin}`,

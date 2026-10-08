@@ -1,26 +1,17 @@
--- 사용자: 구글 로그인 계정(sub)이 기본키. 이메일은 본인에게만 보여 준다.
+-- 사용자: 로그인한 솔라나 지갑 주소(공개키, base58)가 곧 계정이다. 이메일 등 개인정보는 저장하지 않는다.
 CREATE TABLE users (
   id         TEXT PRIMARY KEY,
-  email      TEXT,
-  name       TEXT,
   created_at INTEGER NOT NULL
 );
 
--- 계정에 묶인 솔라나 지갑. 서명으로 소유를 증명한 지갑만 들어간다. 지갑 하나는 계정 하나에만, 계정 하나는 지갑 하나만.
-CREATE TABLE wallets (
-  address   TEXT PRIMARY KEY,
-  user_id   TEXT NOT NULL UNIQUE REFERENCES users(id),
-  linked_at INTEGER NOT NULL
-);
-
--- 지갑 묶기용 1회용 서명 문구
+-- 로그인용 1회용 서명 문구(5분 안에 쓰지 않으면 만료)
 CREATE TABLE nonces (
   nonce      TEXT PRIMARY KEY,
-  user_id    TEXT NOT NULL,
   address    TEXT NOT NULL,
   message    TEXT NOT NULL,
   expires_at INTEGER NOT NULL
 );
+CREATE INDEX idx_nonces_address ON nonces(address);
 
 -- 사용자가 추가한 경전(기본 경전은 코드에 있고 DB에 없다)
 CREATE TABLE sutras (

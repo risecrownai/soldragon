@@ -52,10 +52,8 @@ export function validateComment(body) {
   return s ? { value: s } : { error: "invalid_comment" };
 }
 
-// 공개되는 이름: 구글 이름(30자까지), 없으면 이메일 앞부분을 가려서
-export function displayName(name, email) {
-  const n = typeof name === "string" ? cleanText(name, 30, { multiline: false }) : null;
-  if (n) return n;
-  const local = typeof email === "string" ? email.split("@")[0] : "";
-  return local ? `${[...local].slice(0, 2).join("")}***` : "user";
+// 공개되는 이름: 지갑 주소의 앞뒤 일부만 보여 준다.
+export function shortAddress(address) {
+  const a = String(address || "");
+  return a.length > 10 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a || "user";
 }

@@ -5,8 +5,7 @@ import fs from "node:fs";
 import { base58Decode, base58Encode, b64urlEncode, utf8 } from "../src/util.js";
 import { createSession, readSession, parseCookies, sessionCookie } from "../src/session.js";
 import { addressToKey, verifyWalletSignature, walletMessage } from "../src/wallet.js";
-import { verifyGoogleIdToken, _resetJwksCache } from "../src/google.js";
-import { validateSutra, validateComment, displayName, charLength } from "../src/validate.js";
+import { validateSutra, validateComment, shortAddress, charLength } from "../src/validate.js";
 import { DEFAULT_SUTRA_IDS } from "../src/defaults.js";
 
 const SECRET = "x".repeat(40);
@@ -52,8 +51,8 @@ async function newWallet() {
 
 test("지갑 서명: 맞는 서명만 통과", async () => {
   const w = await newWallet();
-  const msg = walletMessage({ address: w.address, userId: "u1", nonce: "n1", issuedAt: 0, origin: "https://x.test" });
-  assert.match(msg, /Wallet: .+\nAccount: u1\nNonce: n1\nIssued: 1970-01-01T00:00:00.000Z\nOrigin: https:\/\/x.test$/);
+  const msg = walletMessage({ address: w.address, nonce: "n1", issuedAt: 0, origin: "https://x.test" });
+  assert.match(msg, /Wallet: .+\nNonce: n1\nIssued: 1970-01-01T00:00:00.000Z\nOrigin: https:\/\/x.test$/);
   const sig = await w.sign(msg);
   assert.equal(await verifyWalletSignature(w.address, msg, sig), true);
   assert.equal(await verifyWalletSignature(w.address, msg + "!", sig), false); // 다른 문구
@@ -62,42 +61,6 @@ test("지갑 서명: 맞는 서명만 통과", async () => {
   assert.equal(await verifyWalletSignature(w.address, msg, "AAAA"), false);
   assert.equal(await verifyWalletSignature("bad", msg, sig), false);
   assert.equal(await verifyWalletSignature(w.address, msg, "!!!"), false);
-});
-
-async function googleSetup(extra = {}) {
-  const kp = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
-  const jwk = { ...(await crypto.subtle.exportKey("jwk", kp.publicKey)), kid: "k1", alg: "RS256", use: "sig" };
-  const mint = async (claims = {}, header = {}) => {
-    const now = Math.floor(Date.now() / 1000);
-    const h = b64urlEncode(utf8(JSON.stringify({ alg: "RS256", kid: "k1", typ: "JWT", ...header })));
-    const p = b64urlEncode(utf8(JSON.stringify({ iss: "https://accounts.google.com", aud: "cid", sub: "123", email: "a@b.c", email_verified: true, name: "홍길동", iat: now, exp: now + 3600, ...claims })));
-    const sig = b64urlEncode(new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", kp.privateKey, utf8(`${h}.${p}`))));
-    return `${h}.${p}.${sig}`;
-  };
-  const fetchImpl = async () => ({ ok: true, json: async () => ({ keys: [jwk] }) });
-  _resetJwksCache();
-  return { mint, fetchImpl, env: { GOOGLE_CLIENT_ID: "cid", GOOGLE_JWKS_URL: "http://jwks.test/" + Math.random(), ...extra } };
-}
-
-test("구글 ID 토큰: 정상 토큰 통과, 위조·잘못된 대상·만료 등 거부", async () => {
-  const g = await googleSetup();
-  const ok = await verifyGoogleIdToken(await g.mint(), g.env, g.fetchImpl);
-  assert.deepEqual(ok, { sub: "123", email: "a@b.c", name: "홍길동" });
-  const cases = [
-    [{ aud: "other-client" }, {}], [{ iss: "https://evil.example" }, {}], [{ exp: Math.floor(Date.now() / 1000) - 3600 }, {}],
-    [{ sub: "" }, {}], [{ email_verified: false }, {}], [{}, { alg: "none" }], [{}, { kid: "unknown" }],
-  ];
-  for (const [claims, header] of cases) {
-    const token = await g.mint(claims, header);
-    await assert.rejects(() => verifyGoogleIdToken(token, g.env, g.fetchImpl), `거부되어야 함: ${JSON.stringify([claims, header])}`);
-  }
-  // 페이로드 변조(서명은 그대로)
-  const [h, , s] = (await g.mint()).split(".");
-  const evil = b64urlEncode(utf8(JSON.stringify({ iss: "https://accounts.google.com", aud: "cid", sub: "attacker", exp: 9e9 })));
-  await assert.rejects(() => verifyGoogleIdToken(`${h}.${evil}.${s}`, g.env, g.fetchImpl));
-  await assert.rejects(() => verifyGoogleIdToken("a.b", g.env, g.fetchImpl));
-  const valid = await g.mint();
-  await assert.rejects(() => verifyGoogleIdToken(valid, { ...g.env, GOOGLE_CLIENT_ID: "" }, g.fetchImpl));
 });
 
 test("입력 검증: 경전", () => {
@@ -129,9 +92,8 @@ test("입력 검증: 댓글은 100자(코드 포인트) 이내", () => {
 });
 
 test("공개 이름은 이메일을 그대로 드러내지 않는다", () => {
-  assert.equal(displayName("홍길동", "a@b.c"), "홍길동");
-  assert.equal(displayName(null, "johndoe@gmail.com"), "jo***");
-  assert.equal(displayName(null, null), "user");
+  assert.equal(shortAddress("AbCdEfGhIjKlMnOpQrStUvWxYz123456"), "AbCd…3456");
+  assert.equal(shortAddress(""), "user");
 });
 
 test("기본 경전 id 목록이 public/sutras.js와 같다", () => {

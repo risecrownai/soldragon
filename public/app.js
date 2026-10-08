@@ -65,7 +65,7 @@
 
   let selectedId = null; // 순서 변경 모드에서 고른 경전
 
-  // 클라우드가 설정되어 있으면(/api 준비 완료) 구글 로그인 + 서버가 확인한 지갑이 있어야 추가·수정·삭제할 수 있다.
+  // 클라우드가 설정되어 있으면(/api 준비 완료) 지갑 서명으로 로그인해야 추가·수정·삭제할 수 있다.
   // 설정이 없으면 예전처럼 지갑이 연결된 때만 브라우저에 저장하게 한다.
   const cloudOn = () => !!(window.Cloud && Cloud.state.ready);
   const canEdit = () => (cloudOn() ? Cloud.canWrite() : !!wallet);
@@ -805,9 +805,9 @@
 
   $("menuBtn").onclick = () => $("sidebar").classList.toggle("open");
 
-  // ---------- 솔라나 지갑 (Jupiter, Backpack, MetaMask) ----------
-  // Wallet Standard: 지갑이 스스로 등록하는 방식. 이 사이트는 Jupiter, Backpack, MetaMask만 지원한다.
-  const ALLOWED = /jupiter|backpack|metamask/i;
+  // ---------- 솔라나 지갑 (Jupiter, MetaMask, Solflare) ----------
+  // Wallet Standard: 지갑이 스스로 등록하는 방식. 이 사이트는 Jupiter, MetaMask, Solflare만 지원한다.
+  const ALLOWED = /jupiter|metamask|solflare/i;
   const standardWallets = [];
   const registry = {
     register(...ws) {
@@ -826,14 +826,13 @@
   const isSolana = (w) =>
     (w.chains || []).some((c) => String(c).startsWith("solana:")) && w.features && w.features["standard:connect"];
 
-  // 표준을 아직 따르지 않는 구형 주입 provider (Backpack)
+  // 표준 등록이 안 될 때를 대비한 Solflare의 구형 주입 provider(window.solflare)
   const legacyProvidersFor = (name) => {
-    if (!/backpack/i.test(name) || !window.backpack) return [];
-    // Backpack은 버전에 따라 window.backpack 또는 window.backpack.solana에 연결 함수가 있다.
-    return [window.backpack, window.backpack.solana].filter((p) => p && typeof p.connect === "function");
+    if (!/solflare/i.test(name) || !window.solflare || typeof window.solflare.connect !== "function") return [];
+    return [window.solflare];
   };
   const legacy = () => [
-    ["Backpack", window.backpack && window.backpack.isBackpack ? window.backpack : null],
+    ["Solflare", window.solflare && window.solflare.isSolflare ? window.solflare : null],
   ].filter(([, p]) => p);
 
   // 같은 이름의 솔라나 지갑이 여러 개 등록될 수 있다(예: MetaMask 확장 프로그램이 직접 등록한 것 + 이 사이트가 SDK로 등록한 것).
@@ -966,9 +965,10 @@
   // 지갑 설치 페이지와, 스마트폰에서 MetaMask 앱의 내장 브라우저로 이 사이트를 여는 딥링크.
   const KNOWN = [
     { key: "jupiter", name: "Jupiter", url: "https://docs.jup.ag/user-docs/manage/extension-wallet" },
-    { key: "backpack", name: "Backpack", url: "https://backpack.app/download" },
     { key: "metamask", name: "MetaMask", url: "https://metamask.io/download",
       deeplink: () => `https://link.metamask.io/dapp/${location.host}${location.pathname}` },
+    { key: "solflare", name: "Solflare", url: "https://solflare.com/download",
+      deeplink: () => `https://solflare.com/ul/v1/browse/${encodeURIComponent(location.href)}?ref=${encodeURIComponent(location.origin)}` },
   ];
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -1043,7 +1043,7 @@
   let lastError = null; // 진단 정보용
   // 가장 중요한 정보(마지막 오류, 등록된 지갑)를 맨 위에 둔다. 일부만 복사해도 원인이 들어가도록.
   function diagText() {
-    const bp = window.backpack;
+    const sf = window.solflare;
     const lines = [];
     lines.push(lastError ? `last error (${lastError.wallet}): ${lastError.raw}` : "last error: (none)");
     lines.push("registered wallets:");
@@ -1051,7 +1051,7 @@
       lines.push(`- ${w.name} | chains: ${(w.chains || []).join(",")} | features: ${Object.keys(w.features || {}).join(",")}`);
     }
     if (!standardWallets.length) lines.push("- (none)");
-    lines.push(`legacy: window.backpack=${!!bp} (isBackpack=${!!(bp && bp.isBackpack)}, connect=${typeof (bp && bp.connect)}, solana=${typeof (bp && bp.solana)}) window.ethereum.isMetaMask=${!!(window.ethereum && window.ethereum.isMetaMask)}`);
+    lines.push(`legacy: window.solflare=${!!sf} (isSolflare=${!!(sf && sf.isSolflare)}, connect=${typeof (sf && sf.connect)}) window.ethereum.isMetaMask=${!!(window.ethereum && window.ethereum.isMetaMask)}`);
     lines.push(`metamask sdk: ${mmState}`);
     lines.push(`site: ${location.origin}`);
     lines.push(`ua: ${navigator.userAgent}`);
@@ -1088,6 +1088,7 @@
       $("walletBtn").textContent = t("walletDisconnect");
       updateEditLock();
       await refreshInfo();
+      if (pendingLogin) { pendingLogin = false; if (cloudOn() && !Cloud.isLoggedIn()) { accMsg(""); accountDlg.show(); renderAccount(); } }
     } catch (e) {
       clearTimeout(slow);
       console.error("지갑 연결 실패:", w.name, e);
@@ -1173,13 +1174,14 @@
     }
 
     if (isMobile()) {
-      const mm = KNOWN.find((k) => k.key === "metamask");
       const p = document.createElement("p");
       p.className = "note";
       p.textContent = t("walletMobileHint");
       const mUl = section("walletMobile");
       mUl.before(p);
-      mUl.append(walletRow("a", [document.createTextNode(t("walletOpenIn", mm.name))], { href: mm.deeplink(), rel: "noopener" }));
+      for (const k of KNOWN.filter((x) => x.deeplink)) {
+        mUl.append(walletRow("a", [document.createTextNode(t("walletOpenIn", k.name))], { href: k.deeplink(), rel: "noopener" }));
+      }
     }
 
     // 감지되지 않은 지갑의 설치 링크. MetaMask는 SDK가 불러와지지 않았을 때만 보여 준다.
@@ -1242,7 +1244,7 @@
   });
   $("network").onchange = refreshInfo;
 
-  // ---------- 클라우드 계정 (구글 로그인 + 지갑 묶기) ----------
+  // ---------- 클라우드 계정 (지갑 서명 로그인) ----------
   const accountDlg = $("accountDialog");
   const accMsg = (text) => { $("accountMsg").textContent = text || ""; $("accountMsg").hidden = !text; };
 
@@ -1251,7 +1253,6 @@
     b.hidden = !cloudOn();
     if (!cloudOn()) return;
     b.textContent = Cloud.isLoggedIn() ? Cloud.state.me.user.name : t("accountBtn");
-    b.title = Cloud.isLoggedIn() ? Cloud.state.me.user.email || "" : "";
   }
 
   function afterCloudChange() {
@@ -1279,61 +1280,51 @@
     return p;
   };
 
+  let pendingLogin = false; // 로그인하려고 지갑을 연결하는 중이면, 연결이 끝나자마자 로그인 창을 다시 연다
+
   function renderAccount() {
     const body = $("accountBody");
     body.textContent = "";
-    if (!Cloud.isLoggedIn()) {
-      body.append(para(t("loginLead")));
-      const holder = document.createElement("div");
-      holder.className = "gsi-holder";
-      body.append(holder);
-      Cloud.renderLoginButton(holder, () => { accMsg(""); afterCloudChange(); }, (e) => accMsg(Cloud.errText(e)));
+    if (Cloud.isLoggedIn()) {
+      body.append(para(t("loggedInAs", short(Cloud.state.me.user.address)), ""));
+      const row = document.createElement("div");
+      row.className = "acc-actions";
+      row.append(
+        mkBtn("logout", async () => {
+          try { await Cloud.logout(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
+        }),
+        mkBtn("deleteAccount", async () => {
+          if (!confirm(t("deleteAccountConfirm"))) return;
+          try { await Cloud.deleteAccount(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
+        }, "btn ghost"),
+      );
+      body.append(row);
       return;
     }
-    const me = Cloud.state.me;
-    body.append(para(t("loggedInAs", me.user.name + (me.user.email ? ` (${me.user.email})` : "")), ""));
-    if (me.wallet) {
-      body.append(para(t("walletLinkedAs", short(me.wallet.address)), ""));
-      body.append(mkBtn("walletUnlink", async () => {
-        try { await Cloud.unlinkWallet(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
-      }, "btn small ghost"));
-    } else {
-      body.append(para(t("walletNotLinked")));
-      if (!wallet) {
-        body.append(mkBtn("walletLinkConnect", () => { accountDlg.close(); $("walletBtn").click(); }, "btn primary"));
-      } else {
-        body.append(mkBtn("walletLinkSign", async () => {
-          // 지갑의 서명 창이 가려지지 않도록 이 창은 잠시 닫고, 끝나면 다시 연다.
-          accountDlg.close();
-          const note = $("walletInfo");
-          note.hidden = false;
-          note.textContent = t("signing");
-          try {
-            await Cloud.linkWallet(wallet);
-            accMsg(t("linkedOk"));
-          } catch (e) {
-            console.error("지갑 묶기 실패", e);
-            accMsg(e && e.code ? Cloud.errText(e) : `${t("errGeneric")} (${errMessage(e)})`);
-          }
-          refreshInfo();
-          afterCloudChange();
-          accountDlg.show();
-          renderAccount();
-        }, "btn primary"));
-      }
+    body.append(para(t("loginLead")));
+    if (!wallet) {
+      body.append(mkBtn("walletLinkConnect", () => { pendingLogin = true; accountDlg.close(); $("walletBtn").click(); }, "btn primary"));
+      return;
     }
-    const row = document.createElement("div");
-    row.className = "acc-actions";
-    row.append(
-      mkBtn("logout", async () => {
-        try { await Cloud.logout(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
-      }),
-      mkBtn("deleteAccount", async () => {
-        if (!confirm(t("deleteAccountConfirm"))) return;
-        try { await Cloud.deleteAccount(); accMsg(""); afterCloudChange(); } catch (e) { accMsg(Cloud.errText(e)); }
-      }, "btn ghost"),
-    );
-    body.append(row);
+    body.append(para(`${wallet.name} · ${short(wallet.addr)}`, ""));
+    body.append(mkBtn("walletLinkSign", async () => {
+      // 지갑의 서명 창이 가려지지 않도록 이 창은 잠시 닫고, 끝나면 다시 연다.
+      accountDlg.close();
+      const note = $("walletInfo");
+      note.hidden = false;
+      note.textContent = t("signing");
+      try {
+        await Cloud.login(wallet);
+        accMsg("");
+      } catch (e) {
+        console.error("지갑 로그인 실패", e);
+        accMsg(e && e.code ? Cloud.errText(e) : `${t("errGeneric")} (${errMessage(e)})`);
+      }
+      refreshInfo();
+      afterCloudChange();
+      accountDlg.show();
+      renderAccount();
+    }, "btn primary"));
   }
 
   $("accountBtn").onclick = () => { accMsg(""); accountDlg.show(); renderAccount(); };

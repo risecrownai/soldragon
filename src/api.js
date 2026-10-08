@@ -1,9 +1,8 @@
 // Cloudflare Pages Functions용 API. 모든 권한 확인은 여기(서버)에서 한다.
 // 브라우저의 화면 잠금과 달리, 이 코드의 검사는 개발자 도구로 우회할 수 없다.
 import { DEFAULT_SUTRA_IDS } from "./defaults.js";
-import { verifyGoogleIdToken } from "./google.js";
 import { clearCookie, COOKIE, createSession, parseCookies, readSession, sessionCookie } from "./session.js";
-import { displayName, LIMITS, validateComment, validateSutra } from "./validate.js";
+import { LIMITS, shortAddress, validateComment, validateSutra } from "./validate.js";
 import { addressToKey, newNonce, NONCE_TTL_MS, verifyWalletSignature, walletMessage } from "./wallet.js";
 
 class HttpError extends Error {
@@ -36,13 +35,14 @@ async function readJson(request) {
   }
 }
 
+// 관리자 지갑 주소(쉼표 구분). 관리자는 모든 댓글을 지울 수 있다.
 const isAdmin = (env, user) =>
-  !!user?.email &&
-  String(env.ADMIN_EMAILS || "")
+  !!user &&
+  String(env.ADMIN_WALLETS || "")
     .split(",")
-    .map((s) => s.trim().toLowerCase())
+    .map((x) => x.trim())
     .filter(Boolean)
-    .includes(user.email.toLowerCase());
+    .includes(user.id);
 
 const sutraRow = (r, userId) => ({
   id: r.id,
@@ -51,63 +51,65 @@ const sutraRow = (r, userId) => ({
   paragraphs: JSON.parse(r.paragraphs),
   isPublic: !!r.is_public,
   mine: r.owner_id === userId,
-  author: displayName(r.owner_name, r.owner_email),
+  author: shortAddress(r.owner_id),
   createdAt: r.created_at,
   updatedAt: r.updated_at,
 });
 
-// ---------- 인증 ----------
+// ---------- 인증: 지갑 서명으로 로그인(지갑 주소가 곧 계정) ----------
 
 async function currentUser(env, request) {
   const token = parseCookies(request.headers.get("cookie"))[COOKIE];
   const uid = await readSession(env.SESSION_SECRET, token);
   if (!uid) return null;
-  const user = await env.DB.prepare("SELECT id, email, name FROM users WHERE id = ?").bind(uid).first();
-  if (!user) return null;
-  const w = await env.DB.prepare("SELECT address FROM wallets WHERE user_id = ?").bind(uid).first();
-  return { ...user, wallet: w ? w.address : null };
+  return (await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(uid).first()) || null;
 }
 
 const requireUser = (ctx) => {
   if (!ctx.user) throw err(401, "login_required");
   return ctx.user;
 };
-const requireWallet = (ctx) => {
-  const u = requireUser(ctx);
-  if (!u.wallet) throw err(403, "wallet_required");
-  return u;
-};
 
 const meBody = (u) => ({
-  user: u ? { name: displayName(u.name, u.email), email: u.email } : null,
-  wallet: u?.wallet ? { address: u.wallet } : null,
+  user: u ? { address: u.id, name: shortAddress(u.id) } : null,
   limits: { comment: LIMITS.comment, sutrasPerUser: LIMITS.sutrasPerUser },
 });
 
-async function loginGoogle(ctx) {
-  const { env, request, url } = ctx;
-  const body = await readJson(request);
-  let info;
-  try {
-    info = await verifyGoogleIdToken(body.credential, env);
-  } catch (e) {
-    console.warn("google token rejected:", e.message);
-    throw err(401, "invalid_google_token");
-  }
+const MAX_NONCES = 5000;
+
+// 1단계: 서버가 1회용 문구를 준다. 이 문구에 지갑으로 서명하면 그 지갑의 주인임이 증명된다.
+async function authChallenge(ctx) {
+  const { address } = await readJson(ctx.request);
+  if (!addressToKey(address)) throw err(400, "invalid_address");
+  const db = ctx.env.DB;
   const now = Date.now();
-  await env.DB.prepare(
-    `INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET email = excluded.email, name = excluded.name`,
-  ).bind(info.sub, info.email, info.name, now).run();
-  const token = await createSession(env.SESSION_SECRET, info.sub, now);
-  const user = await currentUserById(env, info.sub);
-  return json(meBody(user), 200, { "set-cookie": sessionCookie(token, url.protocol === "https:") });
+  await db.prepare("DELETE FROM nonces WHERE expires_at < ?").bind(now).run();
+  const { n } = await db.prepare("SELECT COUNT(*) AS n FROM nonces").first();
+  if (n >= MAX_NONCES) throw err(429, "rate_limited");
+  const nonce = newNonce();
+  const message = walletMessage({ address, nonce, issuedAt: now, origin: ctx.url.origin });
+  await db.batch([
+    // 한 주소가 문구를 쌓아 두지 못하게 이전 것은 지운다
+    db.prepare("DELETE FROM nonces WHERE address = ?").bind(address),
+    db.prepare("INSERT INTO nonces (nonce, address, message, expires_at) VALUES (?, ?, ?, ?)").bind(nonce, address, message, now + NONCE_TTL_MS),
+  ]);
+  return json({ nonce, message });
 }
 
-async function currentUserById(env, uid) {
-  const user = await env.DB.prepare("SELECT id, email, name FROM users WHERE id = ?").bind(uid).first();
-  const w = await env.DB.prepare("SELECT address FROM wallets WHERE user_id = ?").bind(uid).first();
-  return { ...user, wallet: w ? w.address : null };
+// 2단계: 서명을 검증하고, 맞으면 세션 쿠키를 발급한다(처음이면 계정을 만든다).
+async function authLogin(ctx) {
+  const { address, nonce, signature } = await readJson(ctx.request);
+  if (typeof nonce !== "string" || typeof signature !== "string" || !addressToKey(address)) throw err(400, "invalid_request");
+  const db = ctx.env.DB;
+  const row = await db.prepare("SELECT * FROM nonces WHERE nonce = ? AND address = ?").bind(nonce, address).first();
+  // 1회용: 성공/실패와 상관없이 지금 지운다(재사용 방지)
+  await db.prepare("DELETE FROM nonces WHERE nonce = ?").bind(nonce).run();
+  if (!row || row.expires_at < Date.now()) throw err(400, "challenge_expired");
+  if (!(await verifyWalletSignature(address, row.message, signature))) throw err(400, "bad_signature");
+  const now = Date.now();
+  await db.prepare("INSERT INTO users (id, created_at) VALUES (?, ?) ON CONFLICT(id) DO NOTHING").bind(address, now).run();
+  const token = await createSession(ctx.env.SESSION_SECRET, address, now);
+  return json(meBody({ id: address }), 200, { "set-cookie": sessionCookie(token, ctx.url.protocol === "https:") });
 }
 
 async function deleteAccount(ctx) {
@@ -119,61 +121,16 @@ async function deleteAccount(ctx) {
     db.prepare("DELETE FROM comments WHERE user_id = ?").bind(u.id),
     db.prepare("DELETE FROM reactions WHERE user_id = ?").bind(u.id),
     db.prepare("DELETE FROM sutras WHERE owner_id = ?").bind(u.id),
-    db.prepare("DELETE FROM nonces WHERE user_id = ?").bind(u.id),
-    db.prepare("DELETE FROM wallets WHERE user_id = ?").bind(u.id),
+    db.prepare("DELETE FROM nonces WHERE address = ?").bind(u.id),
     db.prepare("DELETE FROM users WHERE id = ?").bind(u.id),
   ]);
   return json({ ok: true }, 200, { "set-cookie": clearCookie(ctx.url.protocol === "https:") });
 }
 
-// ---------- 지갑 묶기 ----------
-
-async function walletChallenge(ctx) {
-  const u = requireUser(ctx);
-  const { address } = await readJson(ctx.request);
-  if (!addressToKey(address)) throw err(400, "invalid_address");
-  const other = await ctx.env.DB.prepare("SELECT user_id FROM wallets WHERE address = ?").bind(address).first();
-  if (other && other.user_id !== u.id) throw err(409, "wallet_taken");
-  const now = Date.now();
-  const nonce = newNonce();
-  const message = walletMessage({ address, userId: u.id, nonce, issuedAt: now, origin: ctx.url.origin });
-  await ctx.env.DB.batch([
-    ctx.env.DB.prepare("DELETE FROM nonces WHERE expires_at < ? OR user_id = ?").bind(now, u.id),
-    ctx.env.DB.prepare("INSERT INTO nonces (nonce, user_id, address, message, expires_at) VALUES (?, ?, ?, ?, ?)")
-      .bind(nonce, u.id, address, message, now + NONCE_TTL_MS),
-  ]);
-  return json({ nonce, message });
-}
-
-async function walletLink(ctx) {
-  const u = requireUser(ctx);
-  const { address, nonce, signature } = await readJson(ctx.request);
-  if (typeof nonce !== "string" || typeof signature !== "string" || !addressToKey(address)) throw err(400, "invalid_request");
-  const db = ctx.env.DB;
-  const row = await db.prepare("SELECT * FROM nonces WHERE nonce = ? AND user_id = ? AND address = ?").bind(nonce, u.id, address).first();
-  // 1회용: 성공/실패와 상관없이 지금 지운다(재사용 방지)
-  await db.prepare("DELETE FROM nonces WHERE nonce = ?").bind(nonce).run();
-  if (!row || row.expires_at < Date.now()) throw err(400, "challenge_expired");
-  if (!(await verifyWalletSignature(address, row.message, signature))) throw err(400, "bad_signature");
-  const other = await db.prepare("SELECT user_id FROM wallets WHERE address = ?").bind(address).first();
-  if (other && other.user_id !== u.id) throw err(409, "wallet_taken");
-  await db.batch([
-    db.prepare("DELETE FROM wallets WHERE user_id = ?").bind(u.id),
-    db.prepare("INSERT INTO wallets (address, user_id, linked_at) VALUES (?, ?, ?)").bind(address, u.id, Date.now()),
-  ]);
-  return json(meBody({ ...u, wallet: address }));
-}
-
-async function walletUnlink(ctx) {
-  const u = requireUser(ctx);
-  await ctx.env.DB.prepare("DELETE FROM wallets WHERE user_id = ?").bind(u.id).run();
-  return json(meBody({ ...u, wallet: null }));
-}
-
 // ---------- 경전 ----------
 
 const SELECT_SUTRA =
-  "SELECT s.*, u.name AS owner_name, u.email AS owner_email FROM sutras s JOIN users u ON u.id = s.owner_id";
+  "SELECT s.* FROM sutras s";
 
 async function listSutras(ctx) {
   const uid = ctx.user?.id ?? "";
@@ -207,7 +164,7 @@ function insertStmt(db, user, v, now, id = newId()) {
 }
 
 async function createSutra(ctx) {
-  const u = requireWallet(ctx);
+  const u = requireUser(ctx);
   const { value, error } = validateSutra(await readJson(ctx.request));
   if (error) throw err(400, error);
   await assertQuota(ctx, u, 1);
@@ -218,7 +175,7 @@ async function createSutra(ctx) {
 }
 
 async function updateSutra(ctx, id) {
-  const u = requireWallet(ctx);
+  const u = requireUser(ctx);
   const cur = await ctx.env.DB.prepare("SELECT owner_id FROM sutras WHERE id = ?").bind(id).first();
   if (!cur || cur.owner_id !== u.id) throw err(404, "sutra_not_found");
   const { value, error } = validateSutra(await readJson(ctx.request));
@@ -230,7 +187,7 @@ async function updateSutra(ctx, id) {
 }
 
 async function deleteSutra(ctx, id) {
-  const u = requireWallet(ctx);
+  const u = requireUser(ctx);
   const cur = await ctx.env.DB.prepare("SELECT owner_id FROM sutras WHERE id = ?").bind(id).first();
   if (!cur || cur.owner_id !== u.id) throw err(404, "sutra_not_found");
   const db = ctx.env.DB;
@@ -244,7 +201,7 @@ async function deleteSutra(ctx, id) {
 
 // 브라우저(localStorage)에 있던 경전을 올린다. 기본은 비공개.
 async function importSutras(ctx) {
-  const u = requireWallet(ctx);
+  const u = requireUser(ctx);
   const body = await readJson(ctx.request);
   if (!Array.isArray(body.sutras) || body.sutras.length < 1 || body.sutras.length > 50) throw err(400, "invalid_import");
   const values = [];
@@ -277,7 +234,7 @@ async function socialBody(ctx, id) {
   ).bind(id).first();
   const mine = uid ? await db.prepare("SELECT vote, score FROM reactions WHERE sutra_id = ? AND user_id = ?").bind(id, uid).first() : null;
   const { results } = await db.prepare(
-    `SELECT c.id, c.body, c.created_at, c.user_id, u.name, u.email FROM comments c JOIN users u ON u.id = c.user_id
+    `SELECT c.id, c.body, c.created_at, c.user_id FROM comments c
      WHERE c.sutra_id = ? ORDER BY c.id DESC LIMIT 100`,
   ).bind(id).all();
   const { n } = await db.prepare("SELECT COUNT(*) AS n FROM comments WHERE sutra_id = ?").bind(id).first();
@@ -291,7 +248,7 @@ async function socialBody(ctx, id) {
     commentCount: n,
     comments: results.map((c) => ({
       id: c.id,
-      author: displayName(c.name, c.email),
+      author: shortAddress(c.user_id),
       body: c.body,
       createdAt: c.created_at,
       mine: c.user_id === uid,
@@ -358,14 +315,10 @@ async function route(ctx, segs, method) {
     if (method === "GET") return json(meBody(ctx.user));
     if (method === "DELETE") return deleteAccount(ctx);
   }
-  if (a === "auth" && b === "google" && method === "POST") return loginGoogle(ctx);
+  if (a === "auth" && b === "challenge" && method === "POST") return authChallenge(ctx);
+  if (a === "auth" && b === "login" && method === "POST") return authLogin(ctx);
   if (a === "auth" && b === "logout" && method === "POST") {
     return json({ ok: true }, 200, { "set-cookie": clearCookie(url.protocol === "https:") });
-  }
-  if (a === "wallet") {
-    if (b === "challenge" && method === "POST") return walletChallenge(ctx);
-    if (b === "link" && method === "POST") return walletLink(ctx);
-    if (!b && method === "DELETE") return walletUnlink(ctx);
   }
   if (a === "import" && method === "POST") return importSutras(ctx);
   if (a === "comments" && b && !c && method === "DELETE" && /^\d+$/.test(b)) return deleteComment(ctx, Number(b));
@@ -391,10 +344,10 @@ export async function handleRequest(request, env) {
   try {
     // 설정이 끝났는지 알려 준다(프런트는 이 값으로 클라우드 기능을 켠다).
     if (method === "GET" && segs.length === 1 && segs[0] === "config") {
-      const ready = !!(env.DB && env.GOOGLE_CLIENT_ID && env.SESSION_SECRET && env.SESSION_SECRET.length >= 32);
-      return json({ ready, googleClientId: ready ? env.GOOGLE_CLIENT_ID : null });
+      const ready = !!(env.DB && env.SESSION_SECRET && env.SESSION_SECRET.length >= 32);
+      return json({ ready });
     }
-    if (!env.DB || !env.SESSION_SECRET || !env.GOOGLE_CLIENT_ID) throw err(503, "not_configured");
+    if (!env.DB || !env.SESSION_SECRET) throw err(503, "not_configured");
 
     // CSRF 방어: 상태를 바꾸는 요청은 같은 출처에서, 직접 단 헤더와 함께 와야 한다.
     if (!["GET", "HEAD"].includes(method)) {
