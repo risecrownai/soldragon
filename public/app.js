@@ -400,7 +400,8 @@
   function unitsFor(p) {
     const mode = $("mode").value;
     const parts = [];
-    if ((mode === "all" || mode === "orig") && p.orig) parts.push([p.orig, p.lang || current.lang]);
+    // speak: 화면에 보이는 원문과 낭독용 글자가 다를 때(예: 한자 진언을 한글 독음으로 읽기) 낭독에만 쓴다.
+    if ((mode === "all" || mode === "orig") && p.orig) parts.push([p.speak || p.orig, p.lang || current.lang]);
     if (mode === "en" && p.en) parts.push([p.en, "en-US"]);
     if (mode === "ko" && p.ko) parts.push([p.ko, "ko-KR"]);
     return parts.flatMap(([text, lang]) => chunkText(text).map((c) => [c, lang]));
