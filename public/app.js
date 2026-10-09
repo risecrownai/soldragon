@@ -482,7 +482,23 @@
     if (mode === "all" || mode === "ko") add("k", p.ko);
     if (!box.children.length) add("o", p.orig);
     $("fxTitle").textContent = titleOf(current);
+    fitFocus();
   }
+
+  // 문단이 길어도 화면에 모두 보이도록 글자 크기를 줄여 맞춘다(그래도 넘치면 스크롤된다).
+  function fitFocus() {
+    const body = document.querySelector(".fx-body");
+    if (!body || !fx.open) return;
+    let scale = 1;
+    fxEl.style.setProperty("--fxs", "1");
+    body.scrollTop = 0;
+    while (body.scrollHeight > body.clientHeight + 1 && scale > 0.3) {
+      scale = Math.round((scale - 0.05) * 100) / 100;
+      fxEl.style.setProperty("--fxs", String(scale));
+    }
+    body.scrollTop = 0;
+  }
+  window.addEventListener("resize", () => { if (fx.open) fitFocus(); });
 
   function updateFocusBar() {
     if (!fx.open) return;
@@ -533,6 +549,7 @@
     $("fxDone").textContent = t("focusDone", total);
     $("fxDone").hidden = false;
     $("fxInfo").textContent = "";
+    fitFocus();
   }
 
   $("focusBtn").onclick = openFocus;
