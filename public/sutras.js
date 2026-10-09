@@ -138,10 +138,12 @@ window.DEFAULT_SUTRAS = [
     heroTheme: "green",
     paragraphs: [
       { orig: "修利修利 摩訶修利 修修利 娑婆訶",
+        speak: "수리수리 마하수리 수수리 사바하", // 한국어 음성은 한자를 읽지 못하므로 낭독에는 한글 독음을 쓴다
         lang: "ko-KR",
         en: "Purification of the karma of speech mantra: \"Suri suri mahasuri susuri svaha.\" (Mantra, recited as sound; it means roughly: 'auspicious, very auspicious, supremely auspicious, may it be accomplished'.)",
         ko: "정구업진언(淨口業眞言): 수리수리 마하수리 수수리 사바하. (입으로 지은 업을 깨끗이 하는 진언입니다. ‘길상하고 크게 길상하고 가장 길상하니, 성취하소서’라는 뜻입니다.)" },
       { orig: "那謨 三滿多 沒駄喃 唵 度魯度魯 地尾 娑婆訶",
+        speak: "나무 사만다 못다남 옴 도로도로 지미 사바하",
         lang: "ko-KR",
         en: "Mantra to settle and protect the deities of the five directions, inside and out: \"Namo samanta buddhanam, om duru duru jimi svaha.\" (Homage to the Buddhas everywhere; mantra recited as sound.)",
         ko: "오방내외안위제신진언(五方內外安慰諸神眞言): 나무 사만다 못다남 옴 도로도로 지미 사바하. (두루 계신 부처님께 귀의하는 진언입니다.)" },
