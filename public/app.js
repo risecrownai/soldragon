@@ -231,6 +231,7 @@
 
   // 홈 화면: 낭독을 멈추고 경전 선택을 해제한다.
   function goHome() {
+    if (fx.open) closeFocus();
     stop();
     current = null;
     $("reader").hidden = true;
@@ -245,6 +246,7 @@
   });
 
   function open(id, fromUser) {
+    if (fx.open) closeFocus();
     stop();
     current = all().find((s) => s.id === id);
     if (!current) return;
@@ -441,7 +443,88 @@
     return false;
   }
 
+  // ---------- 전체 화면 낭독 모드 ----------
+  const fx = { open: false, para: 0, lock: null };
+  const fxEl = $("focus");
+
+  function renderFocus() {
+    if (!fx.open || !current) return;
+    const p = current.paragraphs[Math.min(fx.para, current.paragraphs.length - 1)] || {};
+    const mode = $("mode").value;
+    const box = $("fxPara");
+    box.textContent = "";
+    const add = (cls, text) => { if (!text) return; const e = document.createElement("p"); e.className = cls; e.textContent = text; box.append(e); };
+    // 화면에 보이는 언어는 읽기 모드를 따른다(원문+영어+한국어 모드는 세 언어를 모두 보여 주고 원문만 낭독)
+    if (mode === "all" || mode === "orig") add("o", p.orig);
+    if (mode === "all" || mode === "en") add("e", p.en);
+    if (mode === "all" || mode === "ko") add("k", p.ko);
+    if (!box.children.length) add("o", p.orig);
+    $("fxTitle").textContent = titleOf(current);
+  }
+
+  function updateFocusBar() {
+    if (!fx.open) return;
+    const total = repeatTotal();
+    $("fxInfo").textContent = player.state !== "idle" ? t("focusRound", player.round + 1, total) : "";
+    $("fxPause").disabled = player.state === "idle";
+    $("fxPause").textContent = t(player.state === "paused" ? "resume" : "pause");
+    $("fxRepeat").value = $("repeat").value;
+  }
+
+  async function holdScreenAwake() {
+    try { if (navigator.wakeLock && fx.open && !fx.lock) fx.lock = await navigator.wakeLock.request("screen"); } catch { /* 지원하지 않거나 거부됨 */ }
+  }
+  document.addEventListener("visibilitychange", () => { fx.lock = null; if (document.visibilityState === "visible") holdScreenAwake(); });
+
+  function openFocus() {
+    if (!current) return;
+    fx.open = true;
+    $("fxRepeat").innerHTML = $("repeat").innerHTML;
+    // 처음 쓸 때(반복 1번)는 21번으로 맞추고, 경전 전체를 단위로 한다.
+    if ($("repeat").value === "1") $("repeat").value = "21";
+    $("scope").value = "all";
+    $("fxDone").hidden = true;
+    fxEl.hidden = false;
+    fx.para = Math.max(0, player.para);
+    renderFocus();
+    updateFocusBar();
+    applyUiText();
+    try { if (fxEl.requestFullscreen) fxEl.requestFullscreen().catch(() => {}); } catch { /* 전체 화면을 못 써도 화면을 덮는 방식으로 동작 */ }
+    holdScreenAwake();
+    if (player.state === "idle") play(0);
+    $("fxPause").focus();
+  }
+
+  function closeFocus() {
+    fx.open = false;
+    fxEl.hidden = true;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    try { if (fx.lock) fx.lock.release(); } catch { /* 무시 */ }
+    fx.lock = null;
+    updateButtons();
+  }
+
+  function showFocusDone() {
+    if (!fx.open) return;
+    const total = repeatTotal();
+    if (!total) return;
+    $("fxDone").textContent = t("focusDone", total);
+    $("fxDone").hidden = false;
+    $("fxInfo").textContent = "";
+  }
+
+  $("focusBtn").onclick = openFocus;
+  $("fxExit").onclick = closeFocus;
+  $("fxStop").onclick = () => { stop(); $("fxDone").hidden = true; };
+  $("fxPause").onclick = () => (player.state === "paused" ? resume() : pause());
+  $("fxRepeat").onchange = () => { $("repeat").value = $("fxRepeat").value; updateButtons(); };
+  // Esc 등으로 브라우저가 전체 화면을 끝내면 이 화면도 닫는다.
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fx.open) closeFocus(); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && fx.open && !document.fullscreenElement) closeFocus(); });
+
   function markPlaying(i, scroll = true) {
+    fx.para = i;
+    renderFocus();
     document.querySelectorAll(".para.playing").forEach((e) => e.classList.remove("playing"));
     const el = $("p" + i);
     if (!el) return;
@@ -454,6 +537,7 @@
     $("pauseBtn").textContent = t(player.state === "paused" ? "resume" : "pause");
     const total = repeatTotal();
     $("repeatInfo").textContent = player.state !== "idle" && total !== 1 ? t("repeatInfo", player.round + 1, total) : "";
+    updateFocusBar();
   }
 
   async function run(my) {
@@ -475,7 +559,7 @@
       if (!advance()) break;
       await sleep(30);
     }
-    if (my === token) finish();
+    if (my === token) { finish(); showFocusDone(); }
   }
 
   function finish() {
@@ -496,6 +580,7 @@
     const interrupted = tts.speaking || tts.pending;
     tts.cancel();
     Object.assign(player, { state: "playing", para: from, unit: 0, round: 0, start: from });
+    $("fxDone").hidden = true;
     const mode = $("mode").value;
     const langs = [(mode === "all" || mode === "orig") && current.lang, mode === "en" && "en-US", mode === "ko" && "ko-KR"].filter(Boolean);
     refreshVoiceNote();
