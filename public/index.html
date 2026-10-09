@@ -184,9 +184,10 @@
   </div>
 </dialog>
 
-<div id="focus" class="focus" hidden role="dialog" aria-modal="false" data-i18n-aria="focusBtn">
+<div id="focus" class="focus" tabindex="-1" hidden role="dialog" aria-modal="false" data-i18n-aria="focusBtn">
   <div class="fx-bar">
     <span id="fxInfo" class="fx-info" aria-live="polite"></span>
+    <span class="fx-key note" data-i18n="focusKeyHint"></span>
     <label class="fx-rep"><span data-i18n="repeat"></span> <select id="fxRepeat"></select></label>
     <button id="fxPause" class="btn small" disabled></button>
     <button id="fxStop" class="btn small" data-i18n="stop"></button>

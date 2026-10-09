@@ -247,6 +247,8 @@
 
   function open(id, fromUser) {
     if (fx.open) closeFocus();
+    // 다른 경전을 읽는 중에 눌렀다면, 끊은 직후의 새 낭독을 브라우저가 무시하지 않도록 play()에 알려 준다.
+    const busy = player.state !== "idle" || !!(tts && (tts.speaking || tts.pending));
     stop();
     current = all().find((s) => s.id === id);
     if (!current) return;
@@ -258,7 +260,7 @@
     populateVoiceNames();
     mountSocial();
     // 브라우저 정책상 사용자 클릭 이후에만 자동 재생이 가능합니다.
-    if (fromUser && $("auto").checked) play(0);
+    if (fromUser && $("auto").checked) play(0, busy);
   }
 
   // 좋아요·점수·댓글: 기본 경전과 공개된 클라우드 경전에만 붙는다(브라우저에만 있는 경전은 제외).
@@ -407,18 +409,37 @@
   let utterRef = null; // 일부 브라우저는 참조를 잃은 utterance의 끝 이벤트를 보내지 않는다
   function speak(text, lang) {
     return new Promise((resolve) => {
-      const u = new SpeechSynthesisUtterance(text);
-      utterRef = u;
-      u.lang = lang;
-      u.rate = parseFloat($("rate").value);
-      u.volume = parseFloat($("volume").value); // 조각마다 읽으므로 낭독 중에도 볼륨 조절이 반영된다
-      const voice = pickVoice(lang);
-      if (voice) u.voice = voice;
-      // 원하는 성별의 음성이 이 기기에 없으면 음높이로 근사한다.
-      u.pitch = Math.min(2, Math.max(0.1, parseFloat($("pitch").value)));
-      u.onend = () => resolve(true);
-      u.onerror = (ev) => resolve(ev && (ev.error === "interrupted" || ev.error === "canceled"));
-      tts.speak(u);
+      let attempt = 0;
+      let done = false;
+      const finishWith = (v) => { done = true; resolve(v); };
+      const start = () => {
+        const mine = ++attempt;
+        const u = new SpeechSynthesisUtterance(text);
+        utterRef = u;
+        u.lang = lang;
+        u.rate = parseFloat($("rate").value);
+        u.volume = parseFloat($("volume").value); // 조각마다 읽으므로 낭독 중에도 볼륨 조절이 반영된다
+        const voice = pickVoice(lang);
+        if (voice) u.voice = voice;
+        // 원하는 성별의 음성이 이 기기에 없으면 음높이로 근사한다.
+        u.pitch = Math.min(2, Math.max(0.1, parseFloat($("pitch").value)));
+        let started = false;
+        u.onstart = () => { started = true; };
+        u.onend = () => { if (mine === attempt) finishWith(true); };
+        u.onerror = (ev) => { if (mine === attempt) finishWith(ev && (ev.error === "interrupted" || ev.error === "canceled")); };
+        tts.speak(u);
+        // 브라우저가 낭독을 조용히 버리는 경우(이전 낭독을 끊은 직후 등)에는 한 번 다시 시도한다.
+        if (mine === 1) {
+          setTimeout(() => {
+            if (done || started || mine !== attempt || player.state !== "playing") return;
+            if (tts.speaking || tts.pending) return; // 실제로는 진행 중
+            attempt++; // 이 낭독을 끊는 취소 이벤트가 낭독 끝으로 오해되지 않도록 먼저 무효로 한다
+            tts.cancel();
+            setTimeout(start, 120);
+          }, 2500);
+        }
+      };
+      start();
     });
   }
 
@@ -492,7 +513,7 @@
     try { if (fxEl.requestFullscreen) fxEl.requestFullscreen().catch(() => {}); } catch { /* 전체 화면을 못 써도 화면을 덮는 방식으로 동작 */ }
     holdScreenAwake();
     if (player.state === "idle") play(0);
-    $("fxPause").focus();
+    fxEl.focus({ preventScroll: true });
   }
 
   function closeFocus() {
@@ -518,6 +539,25 @@
   $("fxStop").onclick = () => { stop(); $("fxDone").hidden = true; };
   $("fxPause").onclick = () => (player.state === "paused" ? resume() : pause());
   $("fxRepeat").onchange = () => { $("repeat").value = $("fxRepeat").value; updateButtons(); };
+  // 스페이스바: 일시정지 ↔ 계속(낭독이 끝났거나 멈춘 상태면 처음부터 다시 시작)
+  function toggleFocusPlay() {
+    if (player.state === "playing") pause();
+    else if (player.state === "paused") resume();
+    else play(0);
+  }
+  const typing = (el) => el && (el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.tagName === "INPUT");
+  document.addEventListener("keydown", (ev) => {
+    if (!fx.open || ev.code !== "Space" || typing(ev.target)) return;
+    ev.preventDefault(); // 포커스된 버튼이 눌리거나 화면이 스크롤되는 것을 막는다
+    if (!ev.repeat) toggleFocusPlay();
+  });
+  document.addEventListener("keyup", (ev) => {
+    if (fx.open && ev.code === "Space" && !typing(ev.target)) ev.preventDefault(); // 버튼은 키를 뗄 때 눌리므로 함께 막는다
+  });
+  // 버튼을 누른 뒤에도 스페이스바가 낭독 토글로 동작하도록 포커스를 화면으로 되돌린다.
+  fxEl.addEventListener("click", (ev) => { if (ev.target.closest("button")) fxEl.focus({ preventScroll: true }); });
+  $("fxRepeat").addEventListener("change", () => $("fxRepeat").blur());
+
   // Esc 등으로 브라우저가 전체 화면을 끝내면 이 화면도 닫는다.
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fx.open) closeFocus(); });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && fx.open && !document.fullscreenElement) closeFocus(); });
@@ -570,14 +610,14 @@
   }
 
   // 지정한 문단부터 낭독을 시작한다(start가 숫자가 아니면 처음부터).
-  function play(start) {
+  function play(start, afterInterrupt) {
     if (!tts) { showNote("ttsUnsupported"); return; }
     if (!current) return;
     const from = Number.isInteger(start) ? start : 0;
     const my = ++token;
     // 읽는 중이던 것을 끊은 직후에는 잠깐 기다려야 새 낭독이 씹히지 않는다.
     // 아무것도 읽고 있지 않을 때는 기다리지 않아야 iOS에서도 클릭 동작 안에서 바로 시작한다.
-    const interrupted = tts.speaking || tts.pending;
+    const interrupted = afterInterrupt || tts.speaking || tts.pending;
     tts.cancel();
     Object.assign(player, { state: "playing", para: from, unit: 0, round: 0, start: from });
     $("fxDone").hidden = true;
@@ -585,7 +625,7 @@
     const langs = [(mode === "all" || mode === "orig") && current.lang, mode === "en" && "en-US", mode === "ko" && "ko-KR"].filter(Boolean);
     refreshVoiceNote();
     updateButtons();
-    if (interrupted) sleep(80).then(() => my === token && run(my));
+    if (interrupted) sleep(150).then(() => my === token && run(my));
     else run(my);
   }
 

@@ -177,3 +177,6 @@ dialog menu{align-items:center}
 .fx-para .e{font-size:clamp(1rem,2.2vw,1.6rem);color:var(--muted);margin:0 0 .5rem;overflow-wrap:anywhere}
 .fx-para .k{font-size:clamp(1.05rem,2.4vw,1.8rem);margin:0;overflow-wrap:anywhere}
 .fx-done{font-size:clamp(1.3rem,3vw,2.2rem);color:var(--gold);font-weight:700;margin:0}
+.focus:focus{outline:none}
+.fx-key{font-size:.85rem}
+@media (max-width:760px){.fx-key{display:none}}
