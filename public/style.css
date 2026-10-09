@@ -170,12 +170,13 @@ dialog menu{align-items:center}
 .fx-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line);background:var(--panel)}
 .fx-info{flex:1;font-weight:600;min-width:6rem}
 .fx-rep{display:flex;gap:.3rem;align-items:center;font-size:.9rem}
-.fx-body{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5rem 6vw;gap:1.2rem}
+.fx-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;align-items:center;text-align:center;padding:1.5rem 6vw;gap:1.2rem}
+.fx-body::before,.fx-body::after{content:"";flex:1 0 0}
 .fx-title{margin:0;color:var(--muted);font-size:1.1rem;font-weight:500}
 .fx-para{max-width:60rem}
-.fx-para .o{font-size:clamp(1.6rem,4.2vw,3.2rem);line-height:1.5;margin:0 0 .8rem;overflow-wrap:anywhere}
-.fx-para .e{font-size:clamp(1rem,2.2vw,1.6rem);color:var(--muted);margin:0 0 .5rem;overflow-wrap:anywhere}
-.fx-para .k{font-size:clamp(1.05rem,2.4vw,1.8rem);margin:0;overflow-wrap:anywhere}
+.fx-para .o{font-size:calc(clamp(1.6rem,4.2vw,3.2rem)*var(--fxs,1));line-height:1.5;margin:0 0 .8rem;overflow-wrap:anywhere}
+.fx-para .e{font-size:calc(clamp(1rem,2.2vw,1.6rem)*var(--fxs,1));color:var(--muted);margin:0 0 .5rem;overflow-wrap:anywhere}
+.fx-para .k{font-size:calc(clamp(1.05rem,2.4vw,1.8rem)*var(--fxs,1));margin:0;overflow-wrap:anywhere}
 .fx-done{font-size:clamp(1.3rem,3vw,2.2rem);color:var(--gold);font-weight:700;margin:0}
 .focus:focus{outline:none}
 .fx-key{font-size:.85rem}
