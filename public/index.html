@@ -112,6 +112,7 @@
           <input id="rate" type="range" min="0.5" max="1.5" step="0.1" value="0.9" data-i18n-aria="speed">
         </label>
         <label class="check"><input id="auto" type="checkbox" checked> <span data-i18n="auto"></span></label>
+        <button id="focusBtn" class="btn small" data-i18n="focusBtn" data-i18n-title="focusHint"></button>
       </div>
       <p id="ttsNote" class="note" hidden></p>
       <p id="intro" class="note intro" hidden></p>
@@ -182,6 +183,22 @@
     </menu>
   </div>
 </dialog>
+
+<div id="focus" class="focus" tabindex="-1" hidden role="dialog" aria-modal="false" data-i18n-aria="focusBtn">
+  <div class="fx-bar">
+    <span id="fxInfo" class="fx-info" aria-live="polite"></span>
+    <span class="fx-key note" data-i18n="focusKeyHint"></span>
+    <label class="fx-rep"><span data-i18n="repeat"></span> <select id="fxRepeat"></select></label>
+    <button id="fxPause" class="btn small" disabled></button>
+    <button id="fxStop" class="btn small" data-i18n="stop"></button>
+    <button id="fxExit" class="btn small ghost" data-i18n="focusExit"></button>
+  </div>
+  <div class="fx-body">
+    <h2 id="fxTitle" class="fx-title"></h2>
+    <div id="fxPara" class="fx-para"></div>
+    <p id="fxDone" class="fx-done" hidden></p>
+  </div>
+</div>
 
 <div id="walletBackdrop" class="wbackdrop" hidden></div>
 <dialog id="walletDialog">

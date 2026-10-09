@@ -163,3 +163,20 @@ dialog menu{align-items:center}
 .c-body{margin:.1rem 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .addr-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
 .addr{font-size:.8rem;word-break:break-all;user-select:all;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.2rem .4rem}
+
+/* 전체 화면 낭독 모드 */
+.focus{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column}
+.focus[hidden]{display:none}
+.fx-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line);background:var(--panel)}
+.fx-info{flex:1;font-weight:600;min-width:6rem}
+.fx-rep{display:flex;gap:.3rem;align-items:center;font-size:.9rem}
+.fx-body{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5rem 6vw;gap:1.2rem}
+.fx-title{margin:0;color:var(--muted);font-size:1.1rem;font-weight:500}
+.fx-para{max-width:60rem}
+.fx-para .o{font-size:clamp(1.6rem,4.2vw,3.2rem);line-height:1.5;margin:0 0 .8rem;overflow-wrap:anywhere}
+.fx-para .e{font-size:clamp(1rem,2.2vw,1.6rem);color:var(--muted);margin:0 0 .5rem;overflow-wrap:anywhere}
+.fx-para .k{font-size:clamp(1.05rem,2.4vw,1.8rem);margin:0;overflow-wrap:anywhere}
+.fx-done{font-size:clamp(1.3rem,3vw,2.2rem);color:var(--gold);font-weight:700;margin:0}
+.focus:focus{outline:none}
+.fx-key{font-size:.85rem}
+@media (max-width:760px){.fx-key{display:none}}
