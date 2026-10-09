@@ -136,6 +136,9 @@ window.DEFAULT_SUTRAS = [
     origLabel: "한자 · 진언 (한국 독송본)",
     hero: ["lotus", "avalokiteshvara", "dragon"],
     heroTheme: "green",
+    startPara: 2, // 낭독은 3번째 문단(개경게)부터 시작한다. 앞의 두 진언은 `▶ 여기서부터`로 읽을 수 있다.
+    intro_ko: "낭독은 3번째 문단(개경게)부터 시작합니다. 앞의 두 진언은 문단의 `▶ 여기서부터`로 읽을 수 있습니다.",
+    intro_en: "Reading starts from the 3rd paragraph (the Opening Verse). You can read the first two mantras with `▶ From here` on each paragraph.",
     paragraphs: [
       { orig: "修利修利 摩訶修利 修修利 娑婆訶",
         lang: "ko-KR",

@@ -260,7 +260,7 @@
     populateVoiceNames();
     mountSocial();
     // 브라우저 정책상 사용자 클릭 이후에만 자동 재생이 가능합니다.
-    if (fromUser && $("auto").checked) play(0, busy);
+    if (fromUser && $("auto").checked) play(startOf(), busy);
   }
 
   // 좋아요·점수·댓글: 기본 경전과 공개된 클라우드 경전에만 붙는다(브라우저에만 있는 경전은 제외).
@@ -269,6 +269,12 @@
     if (!cloudOn() || !current || (current.custom && !current.cloud)) { box.hidden = true; box.textContent = ""; return; }
     Cloud.mountSocial(box, current.id, { socialAllowed: !current.cloud || current.isPublic });
   }
+
+  // 낭독을 시작할 기본 문단(경전에 startPara가 있으면 그 문단부터, 예: 천수경은 3번째 문단)
+  const startOf = () => {
+    const n = current && current.paragraphs ? current.paragraphs.length : 0;
+    return current && Number.isInteger(current.startPara) && current.startPara >= 0 && current.startPara < n ? current.startPara : 0;
+  };
 
   // 경전에 맞는 상단 그림(부처님, 비로자나불, 관세음보살, 연꽃, 용, 태양 중 선택)
   function renderHero() {
@@ -512,7 +518,7 @@
     applyUiText();
     try { if (fxEl.requestFullscreen) fxEl.requestFullscreen().catch(() => {}); } catch { /* 전체 화면을 못 써도 화면을 덮는 방식으로 동작 */ }
     holdScreenAwake();
-    if (player.state === "idle") play(0);
+    if (player.state === "idle") play(startOf());
     fxEl.focus({ preventScroll: true });
   }
 
@@ -543,7 +549,7 @@
   function toggleFocusPlay() {
     if (player.state === "playing") pause();
     else if (player.state === "paused") resume();
-    else play(0);
+    else play(startOf());
   }
   const typing = (el) => el && (el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.tagName === "INPUT");
   document.addEventListener("keydown", (ev) => {
@@ -759,7 +765,7 @@
   $("rate").oninput = applySettingsNow;
   showVolume();
 
-  $("playBtn").onclick = () => play(0);
+  $("playBtn").onclick = () => play(startOf());
   $("pauseBtn").onclick = () => (player.state === "paused" ? resume() : pause());
   $("stopBtn").onclick = stop;
   window.addEventListener("pagehide", stop);
